@@ -9,6 +9,23 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^5.7.14"
+    "@astrojs/node": "^9.2.2",
+    "@astrojs/react": "^4.2.7",
+    "@headlessui/react": "^2.2.4",
+    "@types/react": "^19.1.5",
+    "@types/react-datepicker": "^6.2.0",
+    "@types/react-dom": "^19.1.5",
+    "astro": "^5.7.14",
+    "axios": "^1.9.0",
+    "date-fns": "^4.1.0",
+    "react": "^19.1.0",
+    "react-datepicker": "^8.3.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@astrojs/tailwind": "^6.0.2",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17"
   }
 }

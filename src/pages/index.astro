@@ -1,11 +1,149 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+import Layout from "../layouts/Layout.astro";
 
 // Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
 // Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
 ---
 
-<Layout>
-	<Welcome />
+<Layout
+  title="Inicio"
+  description="Sistema de agendamiento de citas online. Agenda tu cita de manera fácil y rápida."
+>
+  <main class="relative">
+    <!-- Hero section -->
+    <div class="relative pt-16 pb-32 overflow-hidden">
+      <div class="relative">
+        <div
+          class="lg:mx-auto lg:max-w-7xl lg:px-8 lg:grid lg:grid-cols-2 lg:grid-flow-col-dense lg:gap-24"
+        >
+          <div
+            class="px-4 max-w-xl mx-auto sm:px-6 lg:py-16 lg:max-w-none lg:mx-0 lg:px-0"
+          >
+            <div>
+              <div>
+                <h1
+                  class="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl"
+                >
+                  Agenda tu cita de forma fácil y rápida
+                </h1>
+                <p class="mt-4 text-lg text-gray-500">
+                  Nuestro sistema te permite agendar citas de manera sencilla,
+                  eligiendo el horario que mejor se adapte a tu agenda.
+                </p>
+              </div>
+              <div class="mt-12">
+                <a
+                  href="/appointments/new"
+                  class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Agendar Cita
+                </a>
+                <a
+                  href="/auth/login"
+                  class="inline-flex items-center px-6 py-3 border border-gray-300 ml-4 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Iniciar Sesión
+                </a>
+              </div>
+            </div>
+          </div>
+          <div class="mt-12 sm:mt-16 lg:mt-0">
+            <div
+              class="pl-4 -mr-48 sm:pl-6 md:-mr-16 lg:px-0 lg:m-0 lg:relative lg:h-full"
+            >
+              <img
+                class="w-full rounded-xl shadow-xl ring-1 ring-black ring-opacity-5 lg:absolute lg:left-0 lg:h-full lg:w-auto lg:max-w-none"
+                src="https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=2850&q=80"
+                alt="Imagen de calendario"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature section -->
+    <div class="bg-white py-16">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="lg:text-center">
+          <h2
+            class="text-base text-indigo-600 font-semibold tracking-wide uppercase"
+          >
+            Características
+          </h2>
+          <p
+            class="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl"
+          >
+            Una mejor manera de gestionar tu tiempo
+          </p>
+        </div>
+
+        <div class="mt-10">
+          <dl
+            class="space-y-10 md:space-y-0 md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-10"
+          >
+            <div class="relative">
+              <dt>
+                <div
+                  class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white"
+                >
+                  <!-- Heroicon name: outline/clock -->
+                  <svg
+                    class="h-6 w-6"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </div>
+                <p class="ml-16 text-lg leading-6 font-medium text-gray-900">
+                  Ahorra tiempo
+                </p>
+              </dt>
+              <dd class="mt-2 ml-16 text-base text-gray-500">
+                Agenda tus citas en cualquier momento, sin necesidad de llamadas
+                telefónicas.
+              </dd>
+            </div>
+
+            <div class="relative">
+              <dt>
+                <div
+                  class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white"
+                >
+                  <!-- Heroicon name: outline/calendar -->
+                  <svg
+                    class="h-6 w-6"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    ></path>
+                  </svg>
+                </div>
+                <p class="ml-16 text-lg leading-6 font-medium text-gray-900">
+                  Flexibilidad
+                </p>
+              </dt>
+              <dd class="mt-2 ml-16 text-base text-gray-500">
+                Elige el horario que mejor se adapte a tu agenda.
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </main>
 </Layout>

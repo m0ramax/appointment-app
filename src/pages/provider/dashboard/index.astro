@@ -1,0 +1,147 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import { authService, type User } from "../../../lib/api/auth";
+import {
+  appointmentService,
+  type Appointment,
+} from "../../../lib/api/appointments";
+
+let user: User | null = null;
+let appointments: Appointment[] = [];
+
+// Proteger la ruta y verificar rol
+try {
+  user = await authService.getProfile();
+  if (!user) {
+    return Astro.redirect("/auth/login");
+  }
+  if (user.role !== "provider") {
+    return Astro.redirect("/dashboard");
+  }
+
+  // Obtener las citas del proveedor
+  try {
+    appointments = await appointmentService.getUserAppointments();
+  } catch (error) {
+    console.error("Error fetching appointments:", error);
+  }
+} catch (error) {
+  console.error("Error in provider dashboard:", error);
+  return Astro.redirect("/auth/login");
+}
+---
+
+<Layout
+  title="Dashboard de Proveedor"
+  description="Gestiona tus citas y disponibilidad"
+>
+  <main class="py-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="md:flex md:items-center md:justify-between">
+        <div class="flex-1 min-w-0">
+          <h2
+            class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate"
+          >
+            Panel de Proveedor - {user.email}
+          </h2>
+        </div>
+      </div>
+
+      <div class="mt-8">
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+          <div class="px-4 py-5 sm:px-6">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">
+              Citas Programadas
+            </h3>
+          </div>
+          <div class="border-t border-gray-200">
+            {
+              appointments.length > 0 ? (
+                <ul class="divide-y divide-gray-200">
+                  {appointments.map((appointment: Appointment) => (
+                    <li class="px-4 py-4 sm:px-6">
+                      <div class="flex items-center justify-between">
+                        <div class="flex flex-col">
+                          <p class="text-sm font-medium text-indigo-600 truncate">
+                            {appointment.title}
+                          </p>
+                          <p class="text-sm text-gray-500">
+                            {new Date(appointment.date_time).toLocaleString()}
+                          </p>
+                        </div>
+                        <div class="ml-2 flex-shrink-0 flex space-x-2">
+                          <p
+                            class={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                          ${
+                            appointment.status === "pending"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : appointment.status === "confirmed"
+                                ? "bg-green-100 text-green-800"
+                                : appointment.status === "cancelled"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-gray-100 text-gray-800"
+                          }`}
+                          >
+                            {appointment.status}
+                          </p>
+                          {appointment.status === "pending" && (
+                            <button
+                              class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 hover:bg-green-200"
+                              onclick={`confirmAppointment(${appointment.id})`}
+                            >
+                              Confirmar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div class="px-4 py-5 sm:px-6 text-center text-gray-500">
+                  No tienes citas programadas.
+                </div>
+              )
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-8 flex justify-center space-x-4">
+        <a
+          href="/provider/availability"
+          class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Gestionar Disponibilidad
+        </a>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  async function confirmAppointment(appointmentId: number) {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/v1/appointments/${appointmentId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          status: "confirmed",
+        }),
+      });
+
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        alert("Error al confirmar la cita");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Error al confirmar la cita");
+    }
+  }
+</script>

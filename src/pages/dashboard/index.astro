@@ -1,0 +1,23 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+
+<Layout title="Dashboard" description="Panel de control">
+  <main class="py-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h1 class="text-3xl font-bold text-gray-900">
+        ¡Bienvenido al Dashboard!
+      </h1>
+      <p class="mt-4 text-gray-600">Has iniciado sesión correctamente.</p>
+      <div class="mt-4">
+        <a href="/auth/login" class="text-indigo-600 hover:text-indigo-500">
+          Volver al login
+        </a>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  console.log("Token almacenado:", localStorage.getItem("token"));
+</script>
