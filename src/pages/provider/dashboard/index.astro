@@ -1,34 +1,7 @@
 ---
 import Layout from "../../../layouts/Layout.astro";
-import { authService, type User } from "../../../lib/api/auth";
-import {
-  appointmentService,
-  type Appointment,
-} from "../../../lib/api/appointments";
-
-let user: User | null = null;
-let appointments: Appointment[] = [];
-
-// Proteger la ruta y verificar rol
-try {
-  user = await authService.getProfile();
-  if (!user) {
-    return Astro.redirect("/auth/login");
-  }
-  if (user.role !== "provider") {
-    return Astro.redirect("/dashboard");
-  }
-
-  // Obtener las citas del proveedor
-  try {
-    appointments = await appointmentService.getUserAppointments();
-  } catch (error) {
-    console.error("Error fetching appointments:", error);
-  }
-} catch (error) {
-  console.error("Error in provider dashboard:", error);
-  return Astro.redirect("/auth/login");
-}
+import AppointmentList from "../../../components/appointments/AppointmentList";
+import WorkScheduleManager from "../../../components/work-schedule/WorkScheduleManager";
 ---
 
 <Layout
@@ -37,111 +10,307 @@ try {
 >
   <main class="py-10">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <!-- Header -->
       <div class="md:flex md:items-center md:justify-between">
         <div class="flex-1 min-w-0">
-          <h2
-            class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate"
+          <h1 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+            Dashboard del Proveedor
+          </h1>
+          <div class="mt-1 flex flex-col sm:flex-row sm:flex-wrap sm:mt-0 sm:space-x-6">
+            <div class="mt-2 flex items-center text-sm text-gray-500">
+              <svg class="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              <span id="provider-info">Proveedor de Servicios</span>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 flex md:mt-0 md:ml-4">
+          <button
+            onclick="location.reload()"
+            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
           >
-            Panel de Proveedor - {user.email}
-          </h2>
+            Actualizar
+          </button>
         </div>
       </div>
 
+      <!-- Stats Cards -->
+      <div class="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="p-5">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-medium text-gray-500 truncate">Total Citas</dt>
+                  <dd class="text-lg font-medium text-gray-900" id="total-appointments">-</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="p-5">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-medium text-gray-500 truncate">Por Confirmar</dt>
+                  <dd class="text-lg font-medium text-gray-900" id="pending-appointments">-</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="p-5">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-medium text-gray-500 truncate">Confirmadas</dt>
+                  <dd class="text-lg font-medium text-gray-900" id="confirmed-appointments">-</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+          <div class="p-5">
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <svg class="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div class="ml-5 w-0 flex-1">
+                <dl>
+                  <dt class="text-sm font-medium text-gray-500 truncate">Completadas</dt>
+                  <dd class="text-lg font-medium text-gray-900" id="completed-appointments">-</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="mt-8 bg-white shadow rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">
+            Acciones Rápidas
+          </h3>
+          <div class="mt-5 flex space-x-3">
+            <button
+              onclick="confirmAllPending()"
+              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+            >
+              Confirmar Pendientes
+            </button>
+            <button
+              onclick="viewToday()"
+              class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            >
+              Ver Citas de Hoy
+            </button>
+            <a
+              href="/provider/schedule"
+              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+            >
+              <svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Configurar Horarios
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Work Schedule Management -->
       <div class="mt-8">
-        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-          <div class="px-4 py-5 sm:px-6">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">
-              Citas Programadas
-            </h3>
-          </div>
-          <div class="border-t border-gray-200">
-            {
-              appointments.length > 0 ? (
-                <ul class="divide-y divide-gray-200">
-                  {appointments.map((appointment: Appointment) => (
-                    <li class="px-4 py-4 sm:px-6">
-                      <div class="flex items-center justify-between">
-                        <div class="flex flex-col">
-                          <p class="text-sm font-medium text-indigo-600 truncate">
-                            {appointment.title}
-                          </p>
-                          <p class="text-sm text-gray-500">
-                            {new Date(appointment.date_time).toLocaleString()}
-                          </p>
-                        </div>
-                        <div class="ml-2 flex-shrink-0 flex space-x-2">
-                          <p
-                            class={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                          ${
-                            appointment.status === "pending"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : appointment.status === "confirmed"
-                                ? "bg-green-100 text-green-800"
-                                : appointment.status === "cancelled"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-gray-100 text-gray-800"
-                          }`}
-                          >
-                            {appointment.status}
-                          </p>
-                          {appointment.status === "pending" && (
-                            <button
-                              class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 hover:bg-green-200"
-                              onclick={`confirmAppointment(${appointment.id})`}
-                            >
-                              Confirmar
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div class="px-4 py-5 sm:px-6 text-center text-gray-500">
-                  No tienes citas programadas.
-                </div>
-              )
-            }
+        <div class="bg-white shadow rounded-lg">
+          <div class="px-4 py-5 sm:p-6">
+            <div id="work-schedule-container">
+              <!-- Work schedule will be loaded here -->
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="mt-8 flex justify-center space-x-4">
-        <a
-          href="/provider/availability"
-          class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          Gestionar Disponibilidad
-        </a>
+      <!-- Appointments List -->
+      <div class="mt-8">
+        <AppointmentList client:load userRole="provider" />
       </div>
     </div>
   </main>
 </Layout>
 
 <script>
-  async function confirmAppointment(appointmentId: number) {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`/api/v1/appointments/${appointmentId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          status: "confirmed",
-        }),
-      });
+  import { appointmentService } from "../../../lib/api/appointments.ts";
+  import { authService } from "../../../lib/api/auth.ts";
 
-      if (response.ok) {
-        window.location.reload();
-      } else {
-        alert("Error al confirmar la cita");
+  // Check authentication and role protection
+  async function checkAuthAndRole() {
+    if (!authService.isAuthenticated()) {
+      window.location.href = '/login';
+      return false;
+    }
+
+    const user = await authService.getProfile();
+    if (!user) {
+      window.location.href = '/login';
+      return false;
+    }
+
+    // If user is a client, redirect to client dashboard
+    if (user.role === 'client') {
+      window.location.href = '/dashboard';
+      return false;
+    }
+
+    return user;
+  }
+
+  // Load provider info and dashboard stats
+  async function loadProviderData() {
+    try {
+      // Check auth and role first
+      const user = await checkAuthAndRole();
+      if (!user) return;
+
+      console.log('Provider dashboard - User profile:', user); // Debug log
+      
+      const userName = user.email.split('@')[0];
+      const capitalizedName = userName.charAt(0).toUpperCase() + userName.slice(1);
+      
+      // Update provider info
+      const providerInfoElement = document.getElementById('provider-info');
+      if (providerInfoElement) {
+        providerInfoElement.textContent = `Dr. ${capitalizedName}`;
       }
+
+      // Load work schedule component
+      loadWorkScheduleComponent(user.id);
+
+      // Load appointments
+      const appointments = await appointmentService.getUserAppointments();
+      
+      // Calculate stats
+      const total = appointments.length;
+      const pending = appointments.filter(a => a.status === 'pending').length;
+      const confirmed = appointments.filter(a => a.status === 'confirmed').length;
+      const completed = appointments.filter(a => a.status === 'completed').length;
+
+      // Update DOM
+      document.getElementById('total-appointments')!.textContent = total.toString();
+      document.getElementById('pending-appointments')!.textContent = pending.toString();
+      document.getElementById('confirmed-appointments')!.textContent = confirmed.toString();
+      document.getElementById('completed-appointments')!.textContent = completed.toString();
     } catch (error) {
-      console.error("Error:", error);
-      alert("Error al confirmar la cita");
+      console.error('Error loading provider data:', error);
     }
   }
+
+  // Load work schedule component
+  function loadWorkScheduleComponent(providerId) {
+    const container = document.getElementById('work-schedule-container');
+    if (container) {
+      // We'll use a simple approach since Astro handles React components differently
+      container.innerHTML = `
+        <div id="work-schedule-react-root" data-provider-id="${providerId}">
+          <p class="text-gray-500">Cargando horarios de trabajo...</p>
+        </div>
+      `;
+      
+      // The actual React component will be loaded via the WorkScheduleManager import
+      // For now, we'll add a placeholder that can be enhanced later
+      setTimeout(() => {
+        const root = document.getElementById('work-schedule-react-root');
+        if (root) {
+          root.innerHTML = `
+            <div class="space-y-4">
+              <h3 class="text-lg font-medium text-gray-900">Configuración de Horarios</h3>
+              <p class="text-sm text-gray-600 mb-4">
+                Para configurar tus horarios de trabajo, utiliza la API directamente o implementa el componente React.
+              </p>
+              <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
+                <div class="flex">
+                  <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                  <div class="ml-3">
+                    <h3 class="text-sm font-medium text-blue-800">
+                      Sistema de Horarios Implementado
+                    </h3>
+                    <div class="mt-2 text-sm text-blue-700">
+                      <p>El backend está listo. Endpoints disponibles:</p>
+                      <ul class="list-disc ml-5 mt-1">
+                        <li>GET /api/v1/work-schedules/schedules/{provider_id}</li>
+                        <li>POST /api/v1/work-schedules/schedules</li>
+                        <li>PUT /api/v1/work-schedules/schedules/{schedule_id}</li>
+                        <li>GET /api/v1/work-schedules/availability/{provider_id}/{date}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      }, 500);
+    }
+  }
+
+  // Quick action: Confirm all pending appointments
+  window.confirmAllPending = async function() {
+    try {
+      const appointments = await appointmentService.getUserAppointments();
+      const pending = appointments.filter(a => a.status === 'pending');
+      
+      if (pending.length === 0) {
+        alert('No hay citas pendientes para confirmar');
+        return;
+      }
+
+      if (!confirm(`¿Confirmar ${pending.length} citas pendientes?`)) {
+        return;
+      }
+
+      for (const appointment of pending) {
+        await appointmentService.updateAppointment(appointment.id, { status: 'confirmed' });
+      }
+
+      alert(`${pending.length} citas confirmadas exitosamente`);
+      location.reload();
+    } catch (error) {
+      console.error('Error confirming appointments:', error);
+      alert('Error al confirmar las citas');
+    }
+  };
+
+  // Quick action: View today's appointments
+  window.viewToday = function() {
+    alert('Funcionalidad de "Ver Citas de Hoy" - Las citas de hoy se resaltarán en la lista');
+  };
+
+  // Load stats when page loads
+  document.addEventListener('DOMContentLoaded', loadProviderData);
 </script>

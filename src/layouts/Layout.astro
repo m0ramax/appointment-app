@@ -19,9 +19,34 @@ const { title, description } = Astro.props;
     {description && <meta name="description" content={description} />}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
-  <body class="min-h-screen bg-gray-50">
+  <body class="min-h-screen bg-gray-50 dark:bg-gray-900">
     <Navigation client:load />
     <slot />
+    <script>
+      // Simple theme management script
+      function initTheme() {
+        const theme = localStorage.getItem('theme') || 
+          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+        
+        localStorage.setItem('theme', theme);
+      }
+      
+      // Run on page load
+      initTheme();
+      
+      // Listen for storage changes (for cross-tab sync)
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'theme') {
+          initTheme();
+        }
+      });
+    </script>
   </body>
 </html>
 

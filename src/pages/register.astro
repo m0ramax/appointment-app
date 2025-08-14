@@ -1,0 +1,267 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Registro" description="Crea tu cuenta">
+  <main class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+      <div>
+        <div class="mx-auto h-12 w-auto flex justify-center">
+          <div class="h-12 w-12 bg-indigo-600 rounded-lg flex items-center justify-center">
+            <svg class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+        </div>
+        <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          Crear Cuenta
+        </h2>
+        <p class="mt-2 text-center text-sm text-gray-600">
+          Regístrate en el sistema de citas
+        </p>
+      </div>
+
+      <!-- Error Message -->
+      <div id="error-message" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+        <span class="block sm:inline" id="error-text"></span>
+      </div>
+
+      <!-- Success Message -->
+      <div id="success-message" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded relative" role="alert">
+        <span class="block sm:inline">¡Cuenta creada exitosamente! Redirigiendo...</span>
+      </div>
+
+      <form id="register-form" class="mt-8 space-y-6">
+        <div class="space-y-4">
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              required
+              class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              placeholder="correo@ejemplo.com"
+            />
+          </div>
+
+          <div>
+            <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="new-password"
+              required
+              minlength="8"
+              class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              placeholder="Mínimo 8 caracteres"
+            />
+          </div>
+
+          <div>
+            <label for="confirm-password" class="block text-sm font-medium text-gray-700">Confirmar Contraseña</label>
+            <input
+              id="confirm-password"
+              name="confirm-password"
+              type="password"
+              autocomplete="new-password"
+              required
+              class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              placeholder="Repite la contraseña"
+            />
+          </div>
+
+          <div>
+            <label for="role" class="block text-sm font-medium text-gray-700">Tipo de Cuenta</label>
+            <select
+              id="role"
+              name="role"
+              required
+              class="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+            >
+              <option value="">Selecciona un tipo</option>
+              <option value="client">Cliente - Agendar citas</option>
+              <option value="provider">Proveedor - Ofrecer servicios</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div class="text-sm">
+            <a href="/login" class="font-medium text-indigo-600 hover:text-indigo-500">
+              ¿Ya tienes cuenta? Inicia sesión
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <button
+            type="submit"
+            id="register-button"
+            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+              <svg class="h-5 w-5 text-indigo-500 group-hover:text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+              </svg>
+            </span>
+            <span id="register-text">Crear Cuenta</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </main>
+</Layout>
+
+<script>
+  import { authService } from "../lib/api/auth.ts";
+
+  // Show/hide messages
+  function showError(message) {
+    const errorDiv = document.getElementById('error-message');
+    const errorText = document.getElementById('error-text');
+    const successDiv = document.getElementById('success-message');
+    
+    errorText.textContent = message;
+    errorDiv.classList.remove('hidden');
+    successDiv.classList.add('hidden');
+  }
+
+  function showSuccess() {
+    const errorDiv = document.getElementById('error-message');
+    const successDiv = document.getElementById('success-message');
+    
+    errorDiv.classList.add('hidden');
+    successDiv.classList.remove('hidden');
+  }
+
+  function hideMessages() {
+    const errorDiv = document.getElementById('error-message');
+    const successDiv = document.getElementById('success-message');
+    
+    errorDiv.classList.add('hidden');
+    successDiv.classList.add('hidden');
+  }
+
+  // Set loading state
+  function setLoading(loading) {
+    const button = document.getElementById('register-button');
+    const text = document.getElementById('register-text');
+    
+    if (loading) {
+      button.disabled = true;
+      text.textContent = 'Creando cuenta...';
+    } else {
+      button.disabled = false;
+      text.textContent = 'Crear Cuenta';
+    }
+  }
+
+  // Validate passwords match
+  function validatePasswords() {
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+    
+    if (password !== confirmPassword) {
+      showError('Las contraseñas no coinciden');
+      return false;
+    }
+    
+    if (password.length < 8) {
+      showError('La contraseña debe tener al menos 8 caracteres');
+      return false;
+    }
+    
+    return true;
+  }
+
+  // Handle form submission
+  document.getElementById('register-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const role = document.getElementById('role').value;
+    
+    if (!email || !password || !role) {
+      showError('Por favor completa todos los campos');
+      return;
+    }
+
+    if (!validatePasswords()) {
+      return;
+    }
+
+    setLoading(true);
+    hideMessages();
+
+    try {
+      await authService.register({ email, password, role });
+      
+      showSuccess();
+      
+      // Auto-login after successful registration
+      await authService.login({ email, password });
+      
+      // Get user profile to determine redirect
+      const user = await authService.getProfile();
+      
+      // Redirect based on role
+      setTimeout(() => {
+        if (user && user.role === 'provider') {
+          window.location.href = '/provider/dashboard';
+        } else {
+          window.location.href = '/dashboard';
+        }
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Register error:', error);
+      
+      let errorMessage = 'Error al crear la cuenta';
+      if (error.response?.status === 400) {
+        errorMessage = 'Este email ya está registrado';
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      }
+      
+      showError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  // Real-time password validation
+  document.getElementById('confirm-password').addEventListener('input', function() {
+    const password = document.getElementById('password').value;
+    const confirmPassword = this.value;
+    
+    if (confirmPassword && password !== confirmPassword) {
+      this.setCustomValidity('Las contraseñas no coinciden');
+    } else {
+      this.setCustomValidity('');
+    }
+  });
+
+  // Check if already logged in
+  document.addEventListener('DOMContentLoaded', async function() {
+    if (authService.isAuthenticated()) {
+      try {
+        const user = await authService.getProfile();
+        if (user) {
+          // Redirect to appropriate dashboard
+          if (user.role === 'provider') {
+            window.location.href = '/provider/dashboard';
+          } else {
+            window.location.href = '/dashboard';
+          }
+        }
+      } catch (error) {
+        // Token might be invalid, stay on register page
+        console.log('Invalid token, staying on register page');
+      }
+    }
+  });
+</script>

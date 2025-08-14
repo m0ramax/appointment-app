@@ -1,0 +1,63 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import WorkScheduleManager from "../../components/work-schedule/WorkScheduleManager";
+import SimpleScheduleTest from "../../components/work-schedule/SimpleScheduleTest";
+---
+
+<Layout
+  title="Configuración de Horarios"
+  description="Configura tus horarios de trabajo y disponibilidad"
+>
+  <main class="py-10">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <!-- Header -->
+      <div class="mb-8">
+        <nav class="flex items-center space-x-4 text-sm text-gray-500 mb-4">
+          <a href="/provider/dashboard" class="hover:text-gray-700">Dashboard</a>
+          <span>/</span>
+          <span class="text-gray-900">Configuración de Horarios</span>
+        </nav>
+        
+        <h1 class="text-3xl font-bold text-gray-900">
+          Configuración de Horarios
+        </h1>
+        <p class="mt-2 text-gray-600">
+          Configura tus horarios de trabajo, días de descanso y disponibilidad para citas.
+        </p>
+      </div>
+
+      <!-- Debug Component -->
+      <SimpleScheduleTest client:load />
+      
+      <!-- Work Schedule Manager -->
+      <WorkScheduleManager client:load />
+    </div>
+  </main>
+</Layout>
+
+<script>
+  import { authService } from "../../lib/api/auth.ts";
+
+  // Check authentication and role protection
+  async function checkAuth() {
+    if (!authService.isAuthenticated()) {
+      window.location.href = '/login';
+      return;
+    }
+
+    const user = await authService.getProfile();
+    if (!user) {
+      window.location.href = '/login';
+      return;
+    }
+
+    // If user is a client, redirect to client dashboard
+    if (user.role === 'client') {
+      window.location.href = '/dashboard';
+      return;
+    }
+  }
+
+  // Check auth on page load
+  document.addEventListener('DOMContentLoaded', checkAuth);
+</script>
