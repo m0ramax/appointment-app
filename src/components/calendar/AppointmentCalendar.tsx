@@ -1,22 +1,34 @@
 import { useState, useEffect } from "react";
-import DatePicker, { registerLocale } from "react-datepicker";
-import es from "date-fns/locale/es";
+import * as ReactDatePicker from "react-datepicker";
+const DatePicker = ReactDatePicker.default;
+import { es } from "date-fns/locale/es";
 import { format } from "date-fns";
-import { appointmentService, type TimeSlot, type Provider } from "../../lib/api/appointments";
+import {
+  appointmentService,
+  type TimeSlot,
+  type Provider,
+} from "../../lib/api/appointments";
 import "react-datepicker/dist/react-datepicker.css";
 
+const { registerLocale } = ReactDatePicker;
 // Registrar el idioma español
 registerLocale("es", es);
 
 interface AppointmentCalendarProps {
-  onAppointmentSelected?: (date: Date, timeSlot: TimeSlot, provider: Provider) => void;
+  onAppointmentSelected?: (
+    date: Date,
+    timeSlot: TimeSlot,
+    provider: Provider,
+  ) => void;
 }
 
 export default function AppointmentCalendar({
   onAppointmentSelected,
 }: AppointmentCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
+    null,
+  );
   const [providers, setProviders] = useState<Provider[]>([]);
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(false);
@@ -55,7 +67,10 @@ export default function AppointmentCalendar({
     setError("");
     try {
       const formattedDate = format(date, "yyyy-MM-dd");
-      const slots = await appointmentService.getAvailableSlots(formattedDate, providerId);
+      const slots = await appointmentService.getAvailableSlots(
+        formattedDate,
+        providerId,
+      );
       setAvailableSlots(slots);
     } catch (err) {
       setError("Error al cargar los horarios disponibles");
@@ -85,7 +100,7 @@ export default function AppointmentCalendar({
             value={selectedProvider?.id || ""}
             onChange={(e) => {
               const providerId = parseInt(e.target.value);
-              const provider = providers.find(p => p.id === providerId);
+              const provider = providers.find((p) => p.id === providerId);
               setSelectedProvider(provider || null);
             }}
             className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-indigo-500 focus:border-indigo-500"
@@ -123,7 +138,9 @@ export default function AppointmentCalendar({
       )}
 
       {error && (
-        <div className="text-red-500 dark:text-red-400 text-sm text-center mb-4 bg-red-50 dark:bg-red-900/20 p-3 rounded-md">{error}</div>
+        <div className="text-red-500 dark:text-red-400 text-sm text-center mb-4 bg-red-50 dark:bg-red-900/20 p-3 rounded-md">
+          {error}
+        </div>
       )}
 
       {!loading && selectedDate && availableSlots.length > 0 && (

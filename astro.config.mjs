@@ -11,14 +11,14 @@ export default defineConfig({
   output: "server", // Habilita SSR
   adapter: vercel({
     webAnalytics: {
-      enabled: true
+      enabled: true,
     },
-    maxDuration: 8
+    maxDuration: 8,
   }),
   // Configuración para el manejo de cookies y headers
   vite: {
     ssr: {
-      noExternal: ["@headlessui/react"],
+      noExternal: ["@headlessui/react", "react-datepicker"],
     },
   },
 });
