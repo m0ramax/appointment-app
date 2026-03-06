@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import * as ReactDatePicker from "react-datepicker";
-const DatePicker = ReactDatePicker.default;
+import DatePickerLib from "react-datepicker";
+
 import { es } from "date-fns/locale/es";
 import { format } from "date-fns";
 import {
@@ -10,9 +10,8 @@ import {
 } from "../../lib/api/appointments";
 import "react-datepicker/dist/react-datepicker.css";
 
-const { registerLocale } = ReactDatePicker;
-// Registrar el idioma español
-registerLocale("es", es);
+const DatePicker = DatePickerLib as any;
+(DatePickerLib as any).registerLocale?.("es", es);
 
 interface AppointmentCalendarProps {
   onAppointmentSelected?: (

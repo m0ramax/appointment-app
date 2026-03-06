@@ -18,7 +18,7 @@ export default defineConfig({
   // Configuración para el manejo de cookies y headers
   vite: {
     ssr: {
-      noExternal: ["@headlessui/react", "react-datepicker"],
+      noExternal: ["@headlessui/react", "react-datepicker", "date-fns"],
     },
   },
 });
