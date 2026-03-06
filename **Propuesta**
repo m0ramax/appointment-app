@@ -1,0 +1,108 @@
+
+
+**Propuesta**
+Flujo recomendado: `selección primero, auth al confirmar`.
+
+1. `GET /appointments/new` público.
+2. Usuario elige proveedor, fecha, hora y completa datos.
+3. Click en `Confirmar`.
+4. Si no hay sesión:
+   - abrir `login/register` como paso intermedio (ideal modal o página dedicada),
+   - guardar contexto: `provider_id`, `date_time`, `duration`, `title`, `description`, `returnTo=/appointments/new`.
+5. Al autenticar:
+   - volver automáticamente a `returnTo`,
+   - rehidratar formulario,
+   - revalidar disponibilidad (por si alguien tomó ese slot),
+   - si sigue libre: crear cita,
+   - si no: mostrar mensaje claro y mantener datos para re-seleccionar horario.
+6. Éxito:
+   - pantalla de confirmación (`/appointments/confirmed/:id`) en vez de mandarlo directo a dashboard.
+
+**Por qué este flujo sí tiene sentido**
+- Reduce fricción para tráfico frío (Google, referrals).
+- No rompe expectativa: “agendar” significa poder avanzar sin barrera inicial.
+- Pide login solo cuando aporta valor real (persistir reserva y asociarla a cuenta).
+- Evita pérdida de datos y abandono al momento crítico.
+
+**Reglas UX concretas**
+- Botón principal siempre: `Confirmar cita`.
+- Si no autenticado, texto secundario: `Te pediremos iniciar sesión solo para finalizar`.
+- Mensaje de conflicto de horario post-login: `Ese horario ya no está disponible. Elige otro; tus datos se conservaron`.
+- CTA alterno visible: `Continuar como invitado` (si decides soportarlo).
+
+**Impacto técnico mínimo (sin detalle de código aún)**
+1. Guardar “draft” de cita en `sessionStorage`.
+2. Añadir `returnTo` en login/register.
+3. En submit de cita, interceptar falta de token y redirigir a auth con contexto.
+4. Al volver de auth, restaurar draft y reintentar confirmación guiada.
+5. Crear vista simple de confirmación final.
+
+Si quieres, te lo bajo ahora a un checklist de implementación por archivo (`new.astro`, `AppointmentForm.tsx`, `login/register`, `auth service`) para ejecutarlo rápido y sin romper lo actual.
+
+## User
+
+veo innecesario el tener que almacenar datos de sesion para quien quiere agendar, tal vez en un futuro, pero yo quiero agendar una hora, no crearme un nuevo usuario, que opinas? no me propongas flujo, quiero una opinión al respecto, piensa en usabilidad
+
+## Assistant
+
+Coincido contigo.
+
+Desde usabilidad, obligar a crear cuenta para agendar una cita simple suele ser fricción innecesaria y aumenta abandono, especialmente en tráfico frío (Google/referidos). Para la mayoría de usuarios, la tarea es “reservar hora”, no “registrarme”.
+
+Mi opinión: para este producto, lo más usable es permitir reserva sin cuenta y pedir solo datos mínimos de contacto. La cuenta debería ser opcional y posterior (si aporta valor: historial, cambios rápidos, recordatorios, facturas, etc.). Si hoy no necesitas eso, no fuerces autenticación.
+
+## User
+
+entonces, resumeme que hay que modificar, yo lo haré
+
+## Assistant
+
+<thinking>
+
+
+**Summarizing planned modifications**
+</thinking>
+
+Perfecto. Resumen concreto de qué tocar para quitar la fricción de login en agendamiento:
+
+1. Quitar dependencia de auth en creación de cita cliente.
+- `src/lib/api/appointments.ts`
+- Cambiar `createAppointment` para enviar datos de contacto del cliente (nombre/email/teléfono) en vez de asumir `client_id` por token.
+- Si tu backend hoy exige JWT en `POST /api/v1/appointments/`, crear endpoint público de reserva (ej. `/api/v1/public/appointments`).
+
+2. Adaptar el formulario para “reserva sin cuenta”.
+- `src/components/forms/AppointmentForm.tsx`
+- Agregar campos mínimos: nombre, email, teléfono (y validaciones).
+- En `handleSubmit`, llamar al endpoint público.
+- Quitar cualquier supuesto de sesión activa.
+- Cambiar redirect final de `/dashboard` a una pantalla de confirmación.
+
+3. Ajustar el calendario para consumo público.
+- `src/components/calendar/AppointmentCalendar.tsx`
+- Confirmar que `getProviders`, `getAvailableSlots` y `validateAvailability` funcionen sin token.
+- Si no, exponer variantes públicas en backend y apuntar aquí.
+
+4. Actualizar copy/UI para expectativa correcta.
+- `src/pages/appointments/new.astro`
+- `src/pages/index.astro`
+- Texto tipo: “Reserva en minutos, sin crear cuenta”.
+- CTA principal orientado a reservar, no a iniciar sesión.
+
+5. Mantener login solo para funcionalidades avanzadas.
+- `src/pages/dashboard/index.astro`
+- `src/pages/provider/dashboard/index.astro`
+- `src/pages/provider/schedule.astro`
+- Esto sí debe seguir protegido por auth (historial, gestión, panel proveedor).
+
+6. Mejorar manejo de errores en frontend para modo público.
+- `src/components/forms/AppointmentForm.tsx`
+- Si el slot ya no existe, mensaje claro y mantener datos del usuario para reintentar.
+- No mandar al login ante 401 en flujo público (debería no ocurrir si endpoint público está bien).
+
+7. Limpiar navegación para no ocultar “Agendar” por login.
+- `src/components/layout/Navigation.tsx`
+- Mostrar `Agendar Cita` siempre.
+- Dejar `Mis Citas`/`Dashboard` solo para autenticados.
+
+Si quieres, luego te hago una checklist de backend mínima para que no se te escape nada del contrato API.
+
