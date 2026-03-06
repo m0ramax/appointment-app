@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
 import DatePickerLib from "react-datepicker";
-
-import { es } from "date-fns/locale/es";
 import { format } from "date-fns";
 import {
   appointmentService,
@@ -11,7 +9,6 @@ import {
 import "react-datepicker/dist/react-datepicker.css";
 
 const DatePicker = DatePickerLib as any;
-(DatePickerLib as any).registerLocale?.("es", es);
 
 interface AppointmentCalendarProps {
   onAppointmentSelected?: (
@@ -121,7 +118,6 @@ export default function AppointmentCalendar({
         <DatePicker
           selected={selectedDate}
           onChange={(date: Date | null) => setSelectedDate(date)}
-          locale="es"
           dateFormat="dd/MM/yyyy"
           minDate={new Date()}
           disabled={!selectedProvider}
