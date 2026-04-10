@@ -1,8 +1,5 @@
 ---
 import Layout from "../layouts/Layout.astro";
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
 ---
 
 <Layout
@@ -11,134 +8,151 @@ import Layout from "../layouts/Layout.astro";
 >
   <main class="relative">
     <!-- Hero section -->
-    <div class="relative pt-16 pb-32 overflow-hidden">
+    <div class="relative pt-20 pb-32 overflow-hidden">
       <div class="relative">
-        <div
-          class="lg:mx-auto lg:max-w-7xl lg:px-8 lg:grid lg:grid-cols-2 lg:grid-flow-col-dense lg:gap-24"
-        >
-          <div
-            class="px-4 max-w-xl mx-auto sm:px-6 lg:py-16 lg:max-w-none lg:mx-0 lg:px-0"
-          >
+        <div class="lg:mx-auto lg:max-w-7xl lg:px-8 lg:grid lg:grid-cols-2 lg:grid-flow-col-dense lg:gap-24">
+          <div class="px-4 max-w-xl mx-auto sm:px-6 lg:py-20 lg:max-w-none lg:mx-0 lg:px-0">
             <div>
-              <div>
-                <h1
-                  class="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100 sm:text-5xl"
-                >
-                  Agenda tu cita de forma fácil y rápida
-                </h1>
-                <p class="mt-4 text-lg text-gray-500 dark:text-gray-400">
-                  Nuestro sistema te permite agendar citas de manera sencilla,
-                  eligiendo el horario que mejor se adapte a tu agenda.
-                </p>
+              <div class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-pm-gold-dim text-pm-gold border border-pm-gold/20 mb-6">
+                Menos no-shows. Más ingresos para tu negocio.
               </div>
-              <div class="mt-12">
-                <a
-                  href="/appointments/new"
-                  class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Agendar Cita
-                </a>
-                <a
-                  href="/auth/login"
-                  class="inline-flex items-center px-6 py-3 border border-gray-300 dark:border-gray-600 ml-4 text-base font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Iniciar Sesión
-                </a>
-              </div>
+              <h1 class="text-4xl font-extrabold tracking-tight text-pm-text sm:text-5xl lg:text-6xl">
+                Agenda tu cita de forma
+                <span class="text-pm-gold"> fácil y rápida</span>
+              </h1>
+              <p class="mt-6 text-lg text-pm-muted leading-relaxed">
+                Agendamiento por WhatsApp con confirmaciones automáticas. Los clientes se presentan, los negocios no pierden tiempo ni dinero.
+              </p>
             </div>
           </div>
           <div class="mt-12 sm:mt-16 lg:mt-0">
-            <div
-              class="pl-4 -mr-48 sm:pl-6 md:-mr-16 lg:px-0 lg:m-0 lg:relative lg:h-full"
-            >
-              <img
-                class="w-full rounded-xl shadow-xl ring-1 ring-black ring-opacity-5 lg:absolute lg:left-0 lg:h-full lg:w-auto lg:max-w-none"
-                src="https://images.unsplash.com/photo-1551434678-e076c223a692?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=2850&q=80"
-                alt="Imagen de calendario"
-              />
+            <div class="pl-4 -mr-48 sm:pl-6 md:-mr-16 lg:px-0 lg:m-0 lg:relative lg:h-full flex items-center justify-center">
+              <!-- Premium calendar preview card -->
+              <div class="bg-pm-surface border border-pm-border rounded-2xl p-6 shadow-premium max-w-sm w-full">
+                <div class="flex items-center justify-between mb-4">
+                  <span class="text-pm-text font-semibold">Abril 2026</span>
+                  <div class="flex space-x-2">
+                    <div class="w-2 h-2 rounded-full bg-pm-gold"></div>
+                    <div class="w-2 h-2 rounded-full bg-pm-border"></div>
+                    <div class="w-2 h-2 rounded-full bg-pm-border"></div>
+                  </div>
+                </div>
+                <div class="grid grid-cols-7 gap-1 text-center text-xs text-pm-dim mb-2">
+                  {["L","M","M","J","V","S","D"].map(d => <span>{d}</span>)}
+                </div>
+                <div class="grid grid-cols-7 gap-1 text-center text-sm">
+                  {[...Array(30)].map((_, i) => (
+                    <span class={`py-1.5 rounded-md cursor-pointer transition-colors ${
+                      i === 7 ? "bg-pm-gold text-pm-bg font-bold" :
+                      [2,9,14,21].includes(i) ? "border border-pm-gold text-pm-gold" :
+                      "text-pm-muted hover:bg-pm-elevated"
+                    }`}>{i + 1}</span>
+                  ))}
+                </div>
+                <div class="mt-4 pt-4 border-t border-pm-border">
+                  <p class="text-xs text-pm-dim mb-2">Horarios disponibles</p>
+                  <div class="flex flex-wrap gap-2">
+                    {["09:00","10:00","11:00","14:00","15:00"].map(t => (
+                      <span class="px-3 py-1 border border-pm-gold text-pm-gold text-xs rounded-md">{t}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- No-show stat banner -->
+    <div class="border-t border-pm-border bg-pm-elevated/40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div class="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 text-center">
+          <div>
+            <p class="text-4xl font-extrabold text-pm-gold">↓ No-shows</p>
+            <p class="mt-1 text-sm text-pm-muted max-w-xs">Los clientes que agendan por WhatsApp se presentan más. El compromiso digital reduce las ausencias.</p>
+          </div>
+          <div class="hidden md:block w-px h-12 bg-pm-border"></div>
+          <div>
+            <p class="text-4xl font-extrabold text-pm-gold">+ Ingresos</p>
+            <p class="mt-1 text-sm text-pm-muted max-w-xs">Cada cita que no se pierde es dinero que entra. Sin llamadas, sin esperas, sin huecos en la agenda.</p>
+          </div>
+          <div class="hidden md:block w-px h-12 bg-pm-border"></div>
+          <div>
+            <p class="text-4xl font-extrabold text-pm-gold">24/7</p>
+            <p class="mt-1 text-sm text-pm-muted max-w-xs">Tu negocio recibe citas a cualquier hora, aunque estés durmiendo.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Feature section -->
-    <div class="bg-white dark:bg-gray-800 py-16">
+    <div class="bg-pm-surface border-t border-pm-border py-16">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="lg:text-center">
-          <h2
-            class="text-base text-indigo-600 dark:text-indigo-400 font-semibold tracking-wide uppercase"
-          >
+          <h2 class="text-xs text-pm-gold font-semibold tracking-widest uppercase">
             Características
           </h2>
-          <p
-            class="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl"
-          >
+          <p class="mt-3 text-3xl leading-8 font-extrabold tracking-tight text-pm-text sm:text-4xl">
             Una mejor manera de gestionar tu tiempo
           </p>
         </div>
 
-        <div class="mt-10">
-          <dl
-            class="space-y-10 md:space-y-0 md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-10"
-          >
+        <div class="mt-12">
+          <dl class="space-y-10 md:space-y-0 md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-10">
             <div class="relative">
               <dt>
-                <div
-                  class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white"
-                >
-                  <!-- Heroicon name: outline/clock -->
-                  <svg
-                    class="h-6 w-6"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                <div class="absolute flex items-center justify-center h-12 w-12 rounded-xl bg-pm-gold-dim border border-pm-gold/20 text-pm-gold">
+                  <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <p class="ml-16 text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
-                  Ahorra tiempo
-                </p>
+                <p class="ml-16 text-lg leading-6 font-semibold text-pm-text">Ahorra tiempo</p>
               </dt>
-              <dd class="mt-2 ml-16 text-base text-gray-500 dark:text-gray-400">
-                Agenda tus citas en cualquier momento, sin necesidad de llamadas
-                telefónicas.
+              <dd class="mt-2 ml-16 text-base text-pm-muted">
+                Agenda tus citas en cualquier momento, sin necesidad de llamadas telefónicas.
               </dd>
             </div>
 
             <div class="relative">
               <dt>
-                <div
-                  class="absolute flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white"
-                >
-                  <!-- Heroicon name: outline/calendar -->
-                  <svg
-                    class="h-6 w-6"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    ></path>
+                <div class="absolute flex items-center justify-center h-12 w-12 rounded-xl bg-pm-gold-dim border border-pm-gold/20 text-pm-gold">
+                  <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <p class="ml-16 text-lg leading-6 font-medium text-gray-900 dark:text-gray-100">
-                  Flexibilidad
-                </p>
+                <p class="ml-16 text-lg leading-6 font-semibold text-pm-text">Flexibilidad</p>
               </dt>
-              <dd class="mt-2 ml-16 text-base text-gray-500 dark:text-gray-400">
+              <dd class="mt-2 ml-16 text-base text-pm-muted">
                 Elige el horario que mejor se adapte a tu agenda.
+              </dd>
+            </div>
+
+            <div class="relative">
+              <dt>
+                <div class="absolute flex items-center justify-center h-12 w-12 rounded-xl bg-pm-gold-dim border border-pm-gold/20 text-pm-gold">
+                  <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  </svg>
+                </div>
+                <p class="ml-16 text-lg leading-6 font-semibold text-pm-text">Reduce los no-shows</p>
+              </dt>
+              <dd class="mt-2 ml-16 text-base text-pm-muted">
+                El cliente agenda por WhatsApp y recibe confirmación al instante. Menos olvidos, menos ausencias, más ingresos para tu negocio.
+              </dd>
+            </div>
+
+            <div class="relative">
+              <dt>
+                <div class="absolute flex items-center justify-center h-12 w-12 rounded-xl bg-pm-gold-dim border border-pm-gold/20 text-pm-gold">
+                  <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <p class="ml-16 text-lg leading-6 font-semibold text-pm-text">Multi-proveedor</p>
+              </dt>
+              <dd class="mt-2 ml-16 text-base text-pm-muted">
+                Gestiona múltiples proveedores y sus horarios de trabajo.
               </dd>
             </div>
           </dl>

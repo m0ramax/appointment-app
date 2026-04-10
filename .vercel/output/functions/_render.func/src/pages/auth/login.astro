@@ -1,0 +1,17 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import LoginForm from "../../components/auth/LoginForm.tsx";
+---
+
+<Layout
+  title="Iniciar Sesión"
+  description="Inicia sesión en el sistema de agendamiento para gestionar tus citas."
+>
+  <main class="min-h-screen py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-md mx-auto">
+        <LoginForm client:load />
+      </div>
+    </div>
+  </main>
+</Layout>
