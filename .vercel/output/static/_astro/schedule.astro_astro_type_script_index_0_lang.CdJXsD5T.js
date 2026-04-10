@@ -1,1 +1,0 @@
-import{a as n}from"./auth.DHqWy-Lv.js";async function t(){if(!n.isAuthenticated()){window.location.href="/login";return}const e=await n.getProfile();if(!e){window.location.href="/login";return}if(e.role==="client"){window.location.href="/dashboard";return}}document.addEventListener("DOMContentLoaded",t);
