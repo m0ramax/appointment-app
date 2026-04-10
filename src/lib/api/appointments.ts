@@ -3,133 +3,83 @@ import { apiClient } from "./auth";
 export interface TimeSlot {
   start: string;
   end: string;
-  available: boolean;
 }
 
 export interface Provider {
   id: number;
   email: string;
-  name: string;
 }
 
-export interface AppointmentBase {
+export interface AppointmentCreate {
   title: string;
   description?: string;
-  date_time: string;
-  duration_minutes: number;
-}
-
-export interface AppointmentCreate extends AppointmentBase {
-  provider_id: number;
+  dateTime: string;
+  durationMinutes: number;
+  providerId: number;
 }
 
 export interface AppointmentUpdate {
   title?: string;
   description?: string;
-  date_time?: string;
-  duration_minutes?: number;
-  status?: "pending" | "confirmed" | "cancelled" | "completed";
+  dateTime?: string;
+  durationMinutes?: number;
+  status?: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
 }
 
-export interface Appointment extends AppointmentBase {
+export interface Appointment {
   id: number;
-  status: "pending" | "confirmed" | "cancelled" | "completed";
-  client_id: number;
-  provider_id: number;
-  created_at: string;
-  updated_at?: string;
+  title: string;
+  description?: string;
+  dateTime: string;
+  durationMinutes: number;
+  status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
+  clientId: number;
+  providerId: number;
+  businessId?: number;
+  serviceId?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export const appointmentService = {
-  // Obtener citas del usuario actual
   async getUserAppointments(): Promise<Appointment[]> {
-    const response = await apiClient.get<Appointment[]>("/api/v1/appointments/me");
+    const response = await apiClient.get<Appointment[]>("/appointments/me");
     return response.data;
   },
 
-  // Crear una nueva cita
-  async createAppointment(
-    appointmentData: AppointmentCreate
-  ): Promise<Appointment> {
-    const response = await apiClient.post<Appointment>(
-      "/api/v1/appointments/",
-      appointmentData
-    );
+  async createAppointment(data: AppointmentCreate): Promise<Appointment> {
+    const response = await apiClient.post<Appointment>("/appointments", data);
     return response.data;
   },
 
-  // Obtener una cita específica
   async getAppointment(id: number): Promise<Appointment> {
-    const response = await apiClient.get<Appointment>(`/api/v1/appointments/${id}`);
+    const response = await apiClient.get<Appointment>(`/appointments/${id}`);
     return response.data;
   },
 
-  // Actualizar una cita
-  async updateAppointment(
-    id: number,
-    appointmentData: AppointmentUpdate
-  ): Promise<Appointment> {
-    const response = await apiClient.put<Appointment>(
-      `/api/v1/appointments/${id}`,
-      appointmentData
-    );
+  async updateAppointment(id: number, data: AppointmentUpdate): Promise<Appointment> {
+    const response = await apiClient.put<Appointment>(`/appointments/${id}`, data);
     return response.data;
   },
 
-  // Cancelar una cita
-  async cancelAppointment(id: number): Promise<void> {
-    await apiClient.delete(`/api/v1/appointments/${id}`);
-  },
-
-  // Verificar disponibilidad para una fecha
-  async getAvailableSlots(
-    date: string,
-    providerId: number
-  ): Promise<TimeSlot[]> {
-    const response = await apiClient.get<TimeSlot[]>(
-      `/api/v1/appointments/availability/${date}`,
-      {
-        params: { provider_id: providerId },
-      }
-    );
-    return response.data;
-  },
-
-  // Obtener lista de proveedores
-  async getProviders(): Promise<Provider[]> {
-    const response = await apiClient.get<Provider[]>("/api/v1/appointments/providers");
-    return response.data;
-  },
-
-  // Validar disponibilidad de un horario específico
-  async validateAvailability(
-    providerId: number,
-    dateTime: string,
-    durationMinutes: number = 30
-  ): Promise<{available: boolean; reason: string; conflicting_appointment?: any}> {
-    const response = await apiClient.post("/api/v1/appointments/validate-availability", null, {
-      params: {
-        provider_id: providerId,
-        date_time: dateTime,
-        duration_minutes: durationMinutes
-      }
-    });
-    return response.data;
-  },
-
-  // State transition methods
   async confirmAppointment(id: number): Promise<Appointment> {
-    const response = await apiClient.post<Appointment>(`/api/v1/appointments/${id}/confirm`);
-    return response.data;
+    return this.updateAppointment(id, { status: "CONFIRMED" });
   },
 
   async completeAppointment(id: number): Promise<Appointment> {
-    const response = await apiClient.post<Appointment>(`/api/v1/appointments/${id}/complete`);
-    return response.data;
+    return this.updateAppointment(id, { status: "COMPLETED" });
   },
 
-  async cancelAppointmentByStatus(id: number): Promise<Appointment> {
-    const response = await apiClient.post<Appointment>(`/api/v1/appointments/${id}/cancel`);
+  async cancelAppointment(id: number): Promise<Appointment> {
+    return this.updateAppointment(id, { status: "CANCELLED" });
+  },
+
+  async deleteAppointment(id: number): Promise<void> {
+    await apiClient.delete(`/appointments/${id}`);
+  },
+
+  async getProviders(): Promise<Provider[]> {
+    const response = await apiClient.get<Provider[]>("/appointments/providers");
     return response.data;
   },
 };

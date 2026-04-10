@@ -11,29 +11,19 @@ import "react-datepicker/dist/react-datepicker.css";
 const DatePicker = DatePickerLib as any;
 
 interface AppointmentCalendarProps {
-  onAppointmentSelected?: (
-    date: Date,
-    timeSlot: TimeSlot,
-    provider: Provider,
-  ) => void;
+  onAppointmentSelected?: (date: Date, timeSlot: TimeSlot, provider: Provider) => void;
 }
 
-export default function AppointmentCalendar({
-  onAppointmentSelected,
-}: AppointmentCalendarProps) {
+export default function AppointmentCalendar({ onAppointmentSelected }: AppointmentCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
-    null,
-  );
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingProviders, setLoadingProviders] = useState(false);
   const [error, setError] = useState<string>("");
 
-  useEffect(() => {
-    loadProviders();
-  }, []);
+  useEffect(() => { loadProviders(); }, []);
 
   useEffect(() => {
     if (selectedDate && selectedProvider) {
@@ -47,12 +37,9 @@ export default function AppointmentCalendar({
     try {
       const providersList = await appointmentService.getProviders();
       setProviders(providersList);
-      if (providersList.length > 0) {
-        setSelectedProvider(providersList[0]); // Select first provider by default
-      }
-    } catch (err) {
+      if (providersList.length > 0) setSelectedProvider(providersList[0]);
+    } catch {
       setError("Error al cargar los proveedores");
-      console.error(err);
     } finally {
       setLoadingProviders(false);
     }
@@ -63,14 +50,10 @@ export default function AppointmentCalendar({
     setError("");
     try {
       const formattedDate = format(date, "yyyy-MM-dd");
-      const slots = await appointmentService.getAvailableSlots(
-        formattedDate,
-        providerId,
-      );
+      const slots = await appointmentService.getAvailableSlots(formattedDate, providerId);
       setAvailableSlots(slots);
-    } catch (err) {
+    } catch {
       setError("Error al cargar los horarios disponibles");
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -81,29 +64,27 @@ export default function AppointmentCalendar({
     onAppointmentSelected?.(selectedDate, timeSlot, selectedProvider);
   };
 
+  const selectClass = "w-full px-3 py-2.5 border border-pm-border rounded-lg bg-pm-elevated text-pm-text text-sm focus:outline-none focus:border-pm-gold focus:ring-1 focus:ring-pm-gold transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+  const labelClass = "block text-sm font-medium text-pm-muted mb-2";
+
   return (
-    <div className="max-w-md mx-auto p-4">
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Selecciona un proveedor
-        </label>
+    <div className="max-w-md mx-auto">
+      <div className="mb-5">
+        <label className={labelClass}>Proveedor</label>
         {loadingProviders ? (
-          <div className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-            Cargando proveedores...
-          </div>
+          <div className={`${selectClass} text-pm-dim`}>Cargando proveedores...</div>
         ) : (
           <select
             value={selectedProvider?.id || ""}
             onChange={(e) => {
-              const providerId = parseInt(e.target.value);
-              const provider = providers.find((p) => p.id === providerId);
+              const provider = providers.find((p) => p.id === parseInt(e.target.value));
               setSelectedProvider(provider || null);
             }}
-            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-indigo-500 focus:border-indigo-500"
+            className={selectClass}
           >
-            <option value="">Selecciona un proveedor</option>
+            <option value="" className="bg-pm-elevated">Selecciona un proveedor</option>
             {providers.map((provider) => (
-              <option key={provider.id} value={provider.id}>
+              <option key={provider.id} value={provider.id} className="bg-pm-elevated">
                 {provider.name}
               </option>
             ))}
@@ -111,48 +92,45 @@ export default function AppointmentCalendar({
         )}
       </div>
 
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Selecciona una fecha
-        </label>
+      <div className="mb-5">
+        <label className={labelClass}>Fecha</label>
         <DatePicker
           selected={selectedDate}
           onChange={(date: Date | null) => setSelectedDate(date)}
           dateFormat="dd/MM/yyyy"
           minDate={new Date()}
           disabled={!selectedProvider}
-          className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
+          className={`${selectClass} w-full`}
           placeholderText="Selecciona una fecha"
+          wrapperClassName="w-full"
         />
       </div>
 
       {loading && (
-        <div className="text-center py-4 text-gray-600 dark:text-gray-400">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto"></div>
+        <div className="text-center py-6">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-pm-border border-t-pm-gold mx-auto"></div>
         </div>
       )}
 
       {error && (
-        <div className="text-red-500 dark:text-red-400 text-sm text-center mb-4 bg-red-50 dark:bg-red-900/20 p-3 rounded-md">
+        <div className="text-red-400 text-sm text-center mb-4 bg-red-400/10 border border-red-400/20 p-3 rounded-lg">
           {error}
         </div>
       )}
 
       {!loading && selectedDate && availableSlots.length > 0 && (
         <div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-            Horarios disponibles
-          </h3>
-          <div className="grid grid-cols-2 gap-2">
+          <h3 className="text-sm font-medium text-pm-muted mb-3">Horarios disponibles</h3>
+          <div className="grid grid-cols-3 gap-2">
             {availableSlots.map((slot) => (
               <button
                 key={slot.start}
                 onClick={() => handleTimeSlotClick(slot)}
                 disabled={!slot.available}
-                className={`p-2 text-sm rounded-md transition-colors ${
+                className={`py-2 text-sm rounded-lg font-medium transition-colors ${
                   slot.available
-                    ? "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-900/50"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                    ? "border border-pm-gold text-pm-gold hover:bg-pm-gold hover:text-pm-bg"
+                    : "border border-pm-border text-pm-dim cursor-not-allowed"
                 }`}
               >
                 {format(new Date(`2000-01-01T${slot.start}`), "HH:mm")}
@@ -163,7 +141,7 @@ export default function AppointmentCalendar({
       )}
 
       {!loading && selectedDate && availableSlots.length === 0 && (
-        <div className="text-center text-gray-500 py-4">
+        <div className="text-center text-pm-muted text-sm py-6 bg-pm-elevated rounded-lg border border-pm-border">
           No hay horarios disponibles para esta fecha
         </div>
       )}

@@ -1,212 +1,173 @@
 import { useState, useEffect } from "react";
-import { workScheduleService, type WorkSchedule, type WorkScheduleCreate, type ProviderSettings } from "../../lib/api/work-schedule";
+import { workScheduleService, type WorkSchedule, type WorkScheduleCreate, type WorkScheduleUpdate } from "../../lib/api/work-schedule";
 import { authService } from "../../lib/api/auth";
 
 interface WorkScheduleManagerProps {
-  providerId?: number;
   onScheduleUpdate?: () => void;
 }
 
-export default function WorkScheduleManager({ providerId, onScheduleUpdate }: WorkScheduleManagerProps) {
-  const [currentProviderId, setCurrentProviderId] = useState<number | null>(providerId || null);
+const DAYS_OF_WEEK = [
+  { id: "MONDAY",    name: "Lunes" },
+  { id: "TUESDAY",   name: "Martes" },
+  { id: "WEDNESDAY", name: "Miércoles" },
+  { id: "THURSDAY",  name: "Jueves" },
+  { id: "FRIDAY",    name: "Viernes" },
+  { id: "SATURDAY",  name: "Sábado" },
+  { id: "SUNDAY",    name: "Domingo" },
+];
+
+export default function WorkScheduleManager({ onScheduleUpdate }: WorkScheduleManagerProps) {
   const [schedules, setSchedules] = useState<WorkSchedule[]>([]);
-  const [settings, setSettings] = useState<ProviderSettings | null>(null);
+  const [defaultSlotDuration, setDefaultSlotDuration] = useState(30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
-  const [editingDay, setEditingDay] = useState<number | null>(null);
-
-  const daysOfWeek = [
-    { id: 1, name: "Lunes" },
-    { id: 2, name: "Martes" },
-    { id: 3, name: "Miércoles" },
-    { id: 4, name: "Jueves" },
-    { id: 5, name: "Viernes" },
-    { id: 6, name: "Sábado" },
-    { id: 0, name: "Domingo" }
-  ];
+  const [editingDay, setEditingDay] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!currentProviderId) {
-      // Get provider ID from current user
-      authService.getProfile().then(user => {
-        if (user && user.role === 'provider') {
-          setCurrentProviderId(user.id);
-        }
-      }).catch(error => {
-        console.error('Error getting user profile:', error);
-        setError('Error al obtener información del usuario');
+    authService.getProfile().then(user => {
+      const role = user?.role?.toUpperCase();
+      if (role === "PROVIDER" || role === "OWNER") {
+        loadScheduleData();
+      } else {
+        setError("No tienes permisos para gestionar horarios");
         setLoading(false);
-      });
-    } else {
-      loadScheduleData();
-    }
-  }, [currentProviderId]);
-
-  useEffect(() => {
-    if (currentProviderId) {
-      loadScheduleData();
-    }
-  }, [currentProviderId]);
+      }
+    }).catch(() => {
+      setError("Error al obtener información del usuario");
+      setLoading(false);
+    });
+  }, []);
 
   const loadScheduleData = async () => {
-    if (!currentProviderId) return;
-    
     setLoading(true);
     setError("");
-    
     try {
       const [schedulesData, settingsData] = await Promise.all([
-        workScheduleService.getProviderWorkSchedules(currentProviderId),
-        workScheduleService.getProviderSettings(currentProviderId).catch(() => null)
+        workScheduleService.getMyWorkSchedules(),
+        workScheduleService.getMySettings().catch(() => null),
       ]);
-      
       setSchedules(schedulesData);
-      setSettings(settingsData);
-    } catch (err: any) {
-      console.error("Error loading schedule data:", err);
+      if (settingsData?.defaultSlotDuration) {
+        setDefaultSlotDuration(settingsData.defaultSlotDuration);
+      }
+    } catch {
       setError("Error al cargar los horarios");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreateSchedule = async (dayOfWeek: number) => {
-    if (!currentProviderId) return;
-    
+  const handleCreateSchedule = async (dayOfWeek: string) => {
     try {
       const newSchedule: WorkScheduleCreate = {
-        provider_id: currentProviderId,
-        day_of_week: dayOfWeek,
-        start_time: "09:00",
-        end_time: "17:00",
-        slot_duration_minutes: settings?.default_slot_duration || 30,
-        is_active: true
+        dayOfWeek,
+        startTime: "09:00",
+        endTime: "17:00",
+        slotDurationMinutes: defaultSlotDuration,
       };
-
       await workScheduleService.createWorkSchedule(newSchedule);
       await loadScheduleData();
       onScheduleUpdate?.();
       setEditingDay(null);
     } catch (err: any) {
-      console.error("Error creating schedule:", err);
-      setError(err.response?.data?.detail || "Error al crear horario");
+      setError(err.response?.data?.message || "Error al crear horario");
     }
   };
 
-  const handleUpdateSchedule = async (schedule: WorkSchedule, updates: any) => {
+  const handleUpdateSchedule = async (schedule: WorkSchedule, updates: WorkScheduleUpdate) => {
     try {
       await workScheduleService.updateWorkSchedule(schedule.id, updates);
       await loadScheduleData();
       onScheduleUpdate?.();
     } catch (err: any) {
-      console.error("Error updating schedule:", err);
-      setError(err.response?.data?.detail || "Error al actualizar horario");
+      setError(err.response?.data?.message || "Error al actualizar horario");
     }
   };
 
   const handleDeleteSchedule = async (scheduleId: number) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar este horario?")) {
-      return;
-    }
-
+    if (!confirm("¿Estás seguro de que quieres eliminar este horario?")) return;
     try {
       await workScheduleService.deleteWorkSchedule(scheduleId);
       await loadScheduleData();
       onScheduleUpdate?.();
     } catch (err: any) {
-      console.error("Error deleting schedule:", err);
-      setError(err.response?.data?.detail || "Error al eliminar horario");
+      setError(err.response?.data?.message || "Error al eliminar horario");
     }
   };
 
-  const getScheduleForDay = (dayOfWeek: number): WorkSchedule | null => {
-    return schedules.find(s => s.day_of_week === dayOfWeek && s.is_active) || null;
-  };
+  const getScheduleForDay = (dayOfWeek: string): WorkSchedule | null =>
+    schedules.find(s => s.dayOfWeek === dayOfWeek && s.isActive) || null;
 
   if (loading) {
     return (
-      <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Cargando horarios...</p>
+      <div className="text-center py-10">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-pm-border border-t-pm-gold mx-auto"></div>
+        <p className="mt-4 text-pm-muted text-sm">Cargando horarios...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 mt-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900">
-          Horarios de Trabajo
-        </h3>
-        <button
-          onClick={loadScheduleData}
-          className="text-sm text-indigo-600 hover:text-indigo-700"
-        >
+        <h3 className="text-base font-semibold text-pm-text">Horarios de Trabajo</h3>
+        <button onClick={loadScheduleData} className="text-sm text-pm-muted hover:text-pm-gold transition-colors">
           Actualizar
         </button>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div className="bg-red-400/10 border border-red-400/20 text-red-400 px-4 py-3 rounded-lg text-sm">
           {error}
         </div>
       )}
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h4 className="text-sm font-medium text-gray-900">
-            Configuración Semanal
-          </h4>
+      <div className="bg-pm-surface border border-pm-border rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-pm-border">
+          <h4 className="text-sm font-semibold text-pm-text">Configuración Semanal</h4>
         </div>
 
-        <div className="divide-y divide-gray-200">
-          {daysOfWeek.map((day) => {
+        <div className="divide-y divide-pm-border">
+          {DAYS_OF_WEEK.map((day) => {
             const schedule = getScheduleForDay(day.id);
             const isEditing = editingDay === day.id;
 
             return (
-              <div key={day.id} className="px-6 py-4">
+              <div key={day.id} className="px-5 py-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-4">
-                      <span className="text-sm font-medium text-gray-900 w-20">
-                        {day.name}
-                      </span>
-                      
-                      {schedule ? (
-                        <div className="flex items-center space-x-4">
-                          <span className="text-sm text-gray-600">
-                            {workScheduleService.formatTime(schedule.start_time)} - {workScheduleService.formatTime(schedule.end_time)}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            Slots de {schedule.slot_duration_minutes}min
-                          </span>
-                          {schedule.break_start && schedule.break_end && (
-                            <span className="text-xs text-gray-500">
-                              Descanso: {workScheduleService.formatTime(schedule.break_start)} - {workScheduleService.formatTime(schedule.break_end)}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-400">
-                          No configurado
+                  <div className="flex items-center space-x-4 flex-1 min-w-0">
+                    <span className="text-sm font-medium text-pm-text w-20 flex-shrink-0">{day.name}</span>
+                    {schedule ? (
+                      <div className="flex items-center flex-wrap gap-3">
+                        <span className="text-sm text-pm-muted">
+                          {schedule.startTime} — {schedule.endTime}
                         </span>
-                      )}
-                    </div>
+                        <span className="text-xs text-pm-dim bg-pm-elevated px-2 py-0.5 rounded">
+                          {schedule.slotDurationMinutes}min slots
+                        </span>
+                        {schedule.breakStart && schedule.breakEnd && (
+                          <span className="text-xs text-pm-dim">
+                            Descanso: {schedule.breakStart} — {schedule.breakEnd}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-pm-dim">No configurado</span>
+                    )}
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-3 flex-shrink-0 ml-4">
                     {schedule ? (
                       <>
                         <button
                           onClick={() => setEditingDay(isEditing ? null : day.id)}
-                          className="text-sm text-indigo-600 hover:text-indigo-700"
+                          className="text-sm text-pm-gold hover:text-pm-gold-light transition-colors"
                         >
                           {isEditing ? "Cancelar" : "Editar"}
                         </button>
                         <button
                           onClick={() => handleDeleteSchedule(schedule.id)}
-                          className="text-sm text-red-600 hover:text-red-700"
+                          className="text-sm text-red-400 hover:text-red-300 transition-colors"
                         >
                           Eliminar
                         </button>
@@ -214,7 +175,7 @@ export default function WorkScheduleManager({ providerId, onScheduleUpdate }: Wo
                     ) : (
                       <button
                         onClick={() => handleCreateSchedule(day.id)}
-                        className="text-sm text-indigo-600 hover:text-indigo-700"
+                        className="text-sm text-pm-gold hover:text-pm-gold-light transition-colors"
                       >
                         Configurar
                       </button>
@@ -240,116 +201,75 @@ export default function WorkScheduleManager({ providerId, onScheduleUpdate }: Wo
 
 interface ScheduleEditFormProps {
   schedule: WorkSchedule;
-  onUpdate: (updates: any) => void;
+  onUpdate: (updates: WorkScheduleUpdate) => void;
   onCancel: () => void;
 }
 
 function ScheduleEditForm({ schedule, onUpdate, onCancel }: ScheduleEditFormProps) {
   const [formData, setFormData] = useState({
-    start_time: workScheduleService.formatTime(schedule.start_time),
-    end_time: workScheduleService.formatTime(schedule.end_time),
-    slot_duration_minutes: schedule.slot_duration_minutes,
-    break_start: schedule.break_start ? workScheduleService.formatTime(schedule.break_start) : "",
-    break_end: schedule.break_end ? workScheduleService.formatTime(schedule.break_end) : "",
+    startTime: schedule.startTime,
+    endTime: schedule.endTime,
+    slotDurationMinutes: schedule.slotDurationMinutes,
+    breakStart: schedule.breakStart ?? "",
+    breakEnd: schedule.breakEnd ?? "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const updates = {
-      start_time: formData.start_time,
-      end_time: formData.end_time,
-      slot_duration_minutes: formData.slot_duration_minutes,
-      break_start: formData.break_start || null,
-      break_end: formData.break_end || null,
-    };
-
-    onUpdate(updates);
+    onUpdate({
+      startTime: formData.startTime,
+      endTime: formData.endTime,
+      slotDurationMinutes: formData.slotDurationMinutes,
+      breakStart: formData.breakStart || undefined,
+      breakEnd: formData.breakEnd || undefined,
+    });
   };
 
+  const inputClass = "mt-1 block w-full px-3 py-2 border border-pm-border rounded-lg bg-pm-bg text-pm-text text-sm focus:outline-none focus:border-pm-gold focus:ring-1 focus:ring-pm-gold transition-colors";
+  const labelClass = "block text-xs font-medium text-pm-muted";
+
   return (
-    <form onSubmit={handleSubmit} className="mt-4 p-4 bg-gray-50 rounded-lg">
+    <form onSubmit={handleSubmit} className="mt-4 p-4 bg-pm-elevated border border-pm-border rounded-xl">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Hora de inicio
-          </label>
-          <input
-            type="time"
-            value={formData.start_time}
-            onChange={(e) => setFormData({...formData, start_time: e.target.value})}
-            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-            required
-          />
+          <label className={labelClass}>Hora de inicio</label>
+          <input type="time" value={formData.startTime} onChange={(e) => setFormData({...formData, startTime: e.target.value})} className={inputClass} required />
         </div>
-
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Hora de fin
-          </label>
-          <input
-            type="time"
-            value={formData.end_time}
-            onChange={(e) => setFormData({...formData, end_time: e.target.value})}
-            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-            required
-          />
+          <label className={labelClass}>Hora de fin</label>
+          <input type="time" value={formData.endTime} onChange={(e) => setFormData({...formData, endTime: e.target.value})} className={inputClass} required />
         </div>
-
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Duración de slots (minutos)
-          </label>
-          <select
-            value={formData.slot_duration_minutes}
-            onChange={(e) => setFormData({...formData, slot_duration_minutes: parseInt(e.target.value)})}
-            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-          >
-            <option value={15}>15 minutos</option>
-            <option value={30}>30 minutos</option>
-            <option value={45}>45 minutos</option>
-            <option value={60}>60 minutos</option>
-            <option value={90}>90 minutos</option>
-            <option value={120}>120 minutos</option>
+          <label className={labelClass}>Duración de slots</label>
+          <select value={formData.slotDurationMinutes} onChange={(e) => setFormData({...formData, slotDurationMinutes: parseInt(e.target.value)})} className={inputClass}>
+            <option value={15} className="bg-pm-elevated">15 min</option>
+            <option value={30} className="bg-pm-elevated">30 min</option>
+            <option value={45} className="bg-pm-elevated">45 min</option>
+            <option value={60} className="bg-pm-elevated">60 min</option>
+            <option value={90} className="bg-pm-elevated">90 min</option>
+            <option value={120} className="bg-pm-elevated">120 min</option>
           </select>
         </div>
-
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Descanso - Inicio (opcional)
-          </label>
-          <input
-            type="time"
-            value={formData.break_start}
-            onChange={(e) => setFormData({...formData, break_start: e.target.value})}
-            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-          />
+          <label className={labelClass}>Descanso inicio (opcional)</label>
+          <input type="time" value={formData.breakStart} onChange={(e) => setFormData({...formData, breakStart: e.target.value})} className={inputClass} />
         </div>
-
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Descanso - Fin (opcional)
-          </label>
-          <input
-            type="time"
-            value={formData.break_end}
-            onChange={(e) => setFormData({...formData, break_end: e.target.value})}
-            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-          />
+          <label className={labelClass}>Descanso fin (opcional)</label>
+          <input type="time" value={formData.breakEnd} onChange={(e) => setFormData({...formData, breakEnd: e.target.value})} className={inputClass} />
         </div>
       </div>
 
       <div className="mt-4 flex justify-end space-x-3">
         <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          type="button" onClick={onCancel}
+          className="px-4 py-2 text-sm font-medium text-pm-muted border border-pm-border rounded-lg hover:border-pm-gold hover:text-pm-text transition-colors"
         >
           Cancelar
         </button>
         <button
           type="submit"
-          className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700"
+          className="px-4 py-2 text-sm font-semibold text-pm-bg bg-pm-gold hover:bg-pm-gold-light rounded-lg transition-colors"
         >
           Guardar
         </button>
