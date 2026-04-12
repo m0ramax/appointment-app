@@ -5,19 +5,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        'pm-bg': '#0f0f0f',
-        'pm-surface': '#1a1a1a',
-        'pm-elevated': '#222222',
-        'pm-border': '#2a2a2a',
-        'pm-gold': '#C9A84C',
-        'pm-gold-light': '#D4B96A',
-        'pm-gold-dim': 'rgba(201,168,76,0.12)',
-        'pm-text': '#F0F0F0',
-        'pm-muted': '#9A9A9A',
-        'pm-dim': '#666666',
+        'pm-bg':        'var(--pm-bg)',
+        'pm-surface':   'var(--pm-surface)',
+        'pm-elevated':  'var(--pm-elevated)',
+        'pm-border':    'var(--pm-border)',
+        'pm-gold':      'var(--pm-gold)',
+        'pm-gold-light':'var(--pm-gold-light)',
+        'pm-gold-dim':  'var(--pm-gold-dim)',
+        'pm-text':      'var(--pm-text)',
+        'pm-muted':     'var(--pm-muted)',
+        'pm-dim':       'var(--pm-dim)',
       },
       boxShadow: {
-        'premium': '0 4px 24px rgba(0,0,0,0.5)',
+        'premium':      'var(--shadow-premium)',
         'premium-gold': '0 0 0 2px rgba(201,168,76,0.4)',
       }
     },

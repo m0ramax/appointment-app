@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { authService } from "../../lib/api/auth";
 import { APP_NAME } from "../../config/app";
+import ThemeToggle from "./ThemeToggle";
 
 export default function Navigation() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -50,7 +51,8 @@ export default function Navigation() {
               )}
             </div>
           </div>
-          <div className="hidden sm:ml-6 sm:flex sm:items-center space-x-4">
+          <div className="hidden sm:ml-6 sm:flex sm:items-center space-x-3">
+            <ThemeToggle />
             {isLoggedIn ? (
               <button
                 onClick={handleLogout}
@@ -67,7 +69,8 @@ export default function Navigation() {
               </a>
             )}
           </div>
-          <div className="flex items-center sm:hidden">
+          <div className="flex items-center gap-2 sm:hidden">
+            <ThemeToggle />
             {isLoggedIn ? (
               <button
                 onClick={handleLogout}
