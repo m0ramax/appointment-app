@@ -2,6 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Light mode (default) ───────────────────────────────────────────────── */
+:root {
+  --pm-bg:         #FAFAF8;
+  --pm-surface:    #F2F1EE;
+  --pm-elevated:   #E8E6E1;
+  --pm-border:     #D4D1CA;
+  --pm-gold:       #B8922E;
+  --pm-gold-light: #C9A84C;
+  --pm-gold-dim:   rgba(184,146,46,0.12);
+  --pm-text:       #1A1A1A;
+  --pm-muted:      #5A5754;
+  --pm-dim:        #9A9895;
+  --shadow-premium: 0 4px 24px rgba(0,0,0,0.1);
+}
+
+/* ── Dark mode ──────────────────────────────────────────────────────────── */
+.dark {
+  --pm-bg:         #0f0f0f;
+  --pm-surface:    #1a1a1a;
+  --pm-elevated:   #222222;
+  --pm-border:     #2a2a2a;
+  --pm-gold:       #C9A84C;
+  --pm-gold-light: #D4B96A;
+  --pm-gold-dim:   rgba(201,168,76,0.12);
+  --pm-text:       #F0F0F0;
+  --pm-muted:      #9A9A9A;
+  --pm-dim:        #666666;
+  --shadow-premium: 0 4px 24px rgba(0,0,0,0.5);
+}
+
 @layer base {
   html {
     @apply bg-pm-bg text-pm-text;
@@ -13,7 +43,7 @@
 
   ::selection {
     background: rgba(201, 168, 76, 0.3);
-    color: #F0F0F0;
+    color: var(--pm-text);
   }
 
   ::-webkit-scrollbar {
@@ -22,20 +52,29 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: #1a1a1a;
+    background: var(--pm-surface);
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #3a3a3a;
+    background: var(--pm-border);
     border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #C9A84C;
+    background: var(--pm-gold);
   }
 }
 
-/* react-datepicker premium dark */
+/* ── react-datepicker ───────────────────────────────────────────────────── */
+.dark input[type="time"] {
+  color-scheme: dark;
+}
+
+.dark input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+}
+
+/* ── react-datepicker ───────────────────────────────────────────────────── */
 .react-datepicker-wrapper {
   width: 100%;
 }
@@ -43,66 +82,65 @@
 .react-datepicker {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   border-radius: 0.75rem;
-  border: 1px solid #2a2a2a;
-  background-color: #1a1a1a;
-  color: #F0F0F0;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--pm-border);
+  background-color: var(--pm-surface);
+  color: var(--pm-text);
+  box-shadow: var(--shadow-premium);
 }
 
 .react-datepicker__header {
-  background-color: #222222;
-  border-bottom: 1px solid #2a2a2a;
+  background-color: var(--pm-elevated);
+  border-bottom: 1px solid var(--pm-border);
   border-top-left-radius: 0.75rem;
   border-top-right-radius: 0.75rem;
   padding-top: 0.75rem;
 }
 
-.react-datepicker__current-month,
-.react-datepicker__day-name {
-  color: #F0F0F0;
+.react-datepicker__current-month {
+  color: var(--pm-text);
 }
 
 .react-datepicker__day-name {
-  color: #9A9A9A;
+  color: var(--pm-muted);
 }
 
 .react-datepicker__day {
-  color: #F0F0F0;
+  color: var(--pm-text);
   border-radius: 0.375rem;
   transition: all 0.15s;
 }
 
 .react-datepicker__day:hover {
-  background-color: rgba(201, 168, 76, 0.2) !important;
-  color: #C9A84C !important;
+  background-color: var(--pm-gold-dim) !important;
+  color: var(--pm-gold) !important;
 }
 
 .react-datepicker__day--selected {
-  background-color: #C9A84C !important;
-  color: #0f0f0f !important;
+  background-color: var(--pm-gold) !important;
+  color: var(--pm-bg) !important;
   font-weight: 600;
 }
 
 .react-datepicker__day--keyboard-selected {
-  background-color: rgba(201, 168, 76, 0.3) !important;
-  color: #C9A84C !important;
+  background-color: var(--pm-gold-dim) !important;
+  color: var(--pm-gold) !important;
 }
 
 .react-datepicker__day--outside-month {
-  color: #444444 !important;
+  color: var(--pm-dim) !important;
 }
 
 .react-datepicker__day--disabled {
-  color: #3a3a3a !important;
+  color: var(--pm-border) !important;
   cursor: not-allowed;
 }
 
 .react-datepicker__navigation-icon::before {
-  border-color: #9A9A9A;
+  border-color: var(--pm-muted);
 }
 
 .react-datepicker__navigation:hover .react-datepicker__navigation-icon::before {
-  border-color: #C9A84C;
+  border-color: var(--pm-gold);
 }
 
 .react-datepicker__triangle {
@@ -111,12 +149,4 @@
 
 .react-datepicker-popper {
   z-index: 50;
-}
-
-input[type="time"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.7);
-}
-
-input[type="time"] {
-  color-scheme: dark;
 }
