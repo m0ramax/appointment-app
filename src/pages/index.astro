@@ -86,6 +86,214 @@ import Layout from "../layouts/Layout.astro";
       </div>
     </div>
 
+    <!-- How it works slider -->
+    <div class="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <div class="text-center mb-12">
+        <h2 class="text-xs text-pm-gold font-semibold tracking-widest uppercase">Cómo funciona</h2>
+        <p class="mt-3 text-3xl font-extrabold tracking-tight text-pm-text sm:text-4xl">Tu negocio, en un vistazo</p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="flex justify-center gap-2 mb-8 flex-wrap">
+        <button data-tab="0" class="tab-btn active px-4 py-2 text-sm font-medium rounded-lg border border-pm-gold bg-pm-gold-dim text-pm-gold transition-all">Dashboard</button>
+        <button data-tab="1" class="tab-btn px-4 py-2 text-sm font-medium rounded-lg border border-pm-border text-pm-muted hover:border-pm-gold hover:text-pm-gold transition-all">Agenda semanal</button>
+        <button data-tab="2" class="tab-btn px-4 py-2 text-sm font-medium rounded-lg border border-pm-border text-pm-muted hover:border-pm-gold hover:text-pm-gold transition-all">WhatsApp bot</button>
+      </div>
+
+      <!-- Slides -->
+      <div class="relative overflow-hidden rounded-2xl border border-pm-border bg-pm-surface shadow-premium h-[520px] sm:h-[460px]">
+
+        <!-- Slide 0: Dashboard -->
+        <div data-slide="0" class="slide absolute inset-0 p-4 sm:p-6 overflow-y-auto">
+          <!-- Stats row -->
+          <div class="grid grid-cols-3 gap-3 mb-6">
+            <div class="bg-pm-elevated rounded-xl p-4 border border-pm-border">
+              <p class="text-xs text-pm-muted mb-1">Turnos hoy</p>
+              <p class="text-2xl font-bold text-pm-text">12</p>
+              <div class="mt-2 text-pm-gold">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              </div>
+            </div>
+            <div class="bg-pm-elevated rounded-xl p-4 border border-pm-border">
+              <p class="text-xs text-pm-muted mb-1">Ingresos del mes</p>
+              <p class="text-2xl font-bold text-pm-text">$4.500</p>
+              <div class="mt-2 text-pm-gold">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+            </div>
+            <div class="bg-pm-elevated rounded-xl p-4 border border-pm-border">
+              <p class="text-xs text-pm-muted mb-1">Clientes activos</p>
+              <p class="text-2xl font-bold text-pm-text">87</p>
+              <div class="mt-2 text-pm-gold">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </div>
+            </div>
+          </div>
+          <!-- Bottom: próximos turnos -->
+          <div class="bg-pm-elevated rounded-xl border border-pm-border p-4">
+            <p class="text-xs font-semibold text-pm-muted uppercase tracking-widest mb-4">Próximos turnos</p>
+            <div class="space-y-3">
+              {[
+                { name: "María García",   time: "10:00", service: "Corte de cabello", color: "bg-blue-500" },
+                { name: "Juan López",     time: "11:30", service: "Barba",            color: "bg-green-500" },
+                { name: "Ana Martínez",   time: "14:00", service: "Coloración",       color: "bg-purple-500" },
+                { name: "Carlos Ruiz",    time: "16:00", service: "Corte + Barba",    color: "bg-amber-500" },
+              ].map(a => (
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class={`w-8 h-8 rounded-full ${a.color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
+                      {a.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-pm-text">{a.name}</p>
+                      <p class="text-xs text-pm-muted">{a.service}</p>
+                    </div>
+                  </div>
+                  <span class="text-sm font-semibold text-pm-gold">{a.time}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <!-- Slide 1: Agenda semanal -->
+        <div data-slide="1" class="slide hidden p-4 sm:p-6">
+          <div class="flex items-center justify-between mb-4">
+            <p class="text-sm font-semibold text-pm-text">Semana del 7 al 12 de Abril</p>
+            <span class="px-3 py-1 text-xs font-medium rounded-full bg-pm-gold-dim text-pm-gold border border-pm-gold/20">Esta semana</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[500px] text-xs">
+              <thead>
+                <tr>
+                  <th class="w-12 text-pm-dim font-normal pb-3"></th>
+                  {["Lun 7","Mar 8","Mié 9","Jue 10","Vie 11"].map(d => (
+                    <th class="text-center text-pm-muted font-medium pb-3">{d}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { hour: "09:00", slots: [
+                    { text: "María G. — Corte", color: "bg-blue-500/20 border-blue-500/40 text-blue-400" },
+                    { text: "", color: "" },
+                    { text: "Ana M. — Color", color: "bg-purple-500/20 border-purple-500/40 text-purple-400" },
+                    { text: "", color: "" },
+                    { text: "Luis P. — Barba", color: "bg-green-500/20 border-green-500/40 text-green-400" },
+                  ]},
+                  { hour: "10:00", slots: [
+                    { text: "", color: "" },
+                    { text: "Juan L. — Corte", color: "bg-amber-500/20 border-amber-500/40 text-amber-400" },
+                    { text: "", color: "" },
+                    { text: "Carlos R. — Corte", color: "bg-blue-500/20 border-blue-500/40 text-blue-400" },
+                    { text: "", color: "" },
+                  ]},
+                  { hour: "11:00", slots: [
+                    { text: "Pedro V. — Barba", color: "bg-green-500/20 border-green-500/40 text-green-400" },
+                    { text: "", color: "" },
+                    { text: "", color: "" },
+                    { text: "", color: "" },
+                    { text: "Sofia M. — Color", color: "bg-purple-500/20 border-purple-500/40 text-purple-400" },
+                  ]},
+                  { hour: "14:00", slots: [
+                    { text: "", color: "" },
+                    { text: "Rosa T. — Color", color: "bg-purple-500/20 border-purple-500/40 text-purple-400" },
+                    { text: "Miguel A. — Corte", color: "bg-blue-500/20 border-blue-500/40 text-blue-400" },
+                    { text: "", color: "" },
+                    { text: "", color: "" },
+                  ]},
+                ].map(row => (
+                  <tr class="border-t border-pm-border">
+                    <td class="py-2 pr-3 text-pm-dim text-right align-top pt-3">{row.hour}</td>
+                    {row.slots.map(slot => (
+                      <td class="py-2 px-1">
+                        {slot.text ? (
+                          <div class={`rounded-md border px-2 py-1.5 ${slot.color} leading-tight`}>
+                            {slot.text}
+                          </div>
+                        ) : (
+                          <div class="h-8"></div>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Slide 2: WhatsApp bot -->
+        <div data-slide="2" class="slide hidden p-4 sm:p-6">
+          <div class="max-w-sm mx-auto">
+            <!-- Phone frame -->
+            <div class="bg-pm-elevated rounded-2xl border border-pm-border overflow-hidden">
+              <!-- WhatsApp header -->
+              <div class="bg-[#075e54] px-4 py-3 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-[#25d366] flex items-center justify-center text-white text-xs font-bold">A</div>
+                <div>
+                  <p class="text-white text-sm font-medium">Agendya Bot</p>
+                  <p class="text-green-300 text-xs">en línea</p>
+                </div>
+              </div>
+              <!-- Chat -->
+              <div class="p-4 space-y-3 bg-pm-bg min-h-[320px]">
+                <!-- Bot -->
+                <div class="flex gap-2">
+                  <div class="bg-pm-surface rounded-2xl rounded-tl-none px-3 py-2 max-w-[80%] border border-pm-border">
+                    <p class="text-xs text-pm-text">Hola! Bienvenido a <span class="text-pm-gold font-medium">Estética Moderna</span> 👋</p>
+                    <p class="text-xs text-pm-text mt-1">¿Qué servicio necesitas?</p>
+                    <p class="text-xs text-pm-muted mt-1">1. Corte de cabello<br/>2. Coloración<br/>3. Barba</p>
+                    <p class="text-xs text-pm-dim mt-1 text-right">10:23 ✓✓</p>
+                  </div>
+                </div>
+                <!-- User -->
+                <div class="flex justify-end">
+                  <div class="bg-[#075e54] rounded-2xl rounded-tr-none px-3 py-2 max-w-[60%]">
+                    <p class="text-xs text-white">1</p>
+                    <p class="text-xs text-green-300 mt-1 text-right">10:24 ✓✓</p>
+                  </div>
+                </div>
+                <!-- Bot -->
+                <div class="flex gap-2">
+                  <div class="bg-pm-surface rounded-2xl rounded-tl-none px-3 py-2 max-w-[80%] border border-pm-border">
+                    <p class="text-xs text-pm-text">¿Para qué día?</p>
+                    <p class="text-xs text-pm-muted mt-1">Puedes escribir <span class="text-pm-gold">hoy</span>, <span class="text-pm-gold">mañana</span> o una fecha (ej: 15/04)</p>
+                    <p class="text-xs text-pm-dim mt-1 text-right">10:24 ✓✓</p>
+                  </div>
+                </div>
+                <!-- User -->
+                <div class="flex justify-end">
+                  <div class="bg-[#075e54] rounded-2xl rounded-tr-none px-3 py-2 max-w-[60%]">
+                    <p class="text-xs text-white">mañana</p>
+                    <p class="text-xs text-green-300 mt-1 text-right">10:25 ✓✓</p>
+                  </div>
+                </div>
+                <!-- Bot -->
+                <div class="flex gap-2">
+                  <div class="bg-pm-surface rounded-2xl rounded-tl-none px-3 py-2 max-w-[80%] border border-pm-border">
+                    <p class="text-xs text-pm-text">Horarios disponibles para mañana:</p>
+                    <p class="text-xs text-pm-muted mt-1">09:00 · 10:00 · 11:00 · 14:00 · 15:00</p>
+                    <p class="text-xs text-pm-text mt-1">¿Cuál prefieres?</p>
+                    <p class="text-xs text-pm-dim mt-1 text-right">10:25 ✓✓</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p class="text-center text-xs text-pm-dim mt-4">El cliente agenda en segundos, sin llamadas ni formularios.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Dots -->
+      <div class="flex justify-center gap-2 mt-6">
+        <button data-dot="0" class="dot w-2 h-2 rounded-full bg-pm-gold transition-all"></button>
+        <button data-dot="1" class="dot w-2 h-2 rounded-full bg-pm-border transition-all"></button>
+        <button data-dot="2" class="dot w-2 h-2 rounded-full bg-pm-border transition-all"></button>
+      </div>
+    </div>
+
     <!-- Feature section -->
     <div class="bg-pm-surface border-t border-pm-border py-16">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -160,4 +368,41 @@ import Layout from "../layouts/Layout.astro";
       </div>
     </div>
   </main>
+<script>
+  function initSlider() {
+    let current = 0;
+    const slides = document.querySelectorAll('.slide');
+    const tabs = document.querySelectorAll('.tab-btn');
+    const dots = document.querySelectorAll('.dot');
+
+    function goTo(index: number) {
+      slides.forEach((s, i) => {
+        s.classList.toggle('hidden', i !== index);
+        (s as HTMLElement).style.opacity = i === index ? '1' : '0';
+      });
+      tabs.forEach((t, i) => {
+        t.classList.toggle('border-pm-gold', i === index);
+        t.classList.toggle('bg-pm-gold-dim', i === index);
+        t.classList.toggle('text-pm-gold', i === index);
+        t.classList.toggle('border-pm-border', i !== index);
+        t.classList.toggle('text-pm-muted', i !== index);
+      });
+      dots.forEach((d, i) => {
+        (d as HTMLElement).style.background = i === index ? 'var(--pm-gold)' : 'var(--pm-border)';
+        (d as HTMLElement).style.width = i === index ? '1.5rem' : '0.5rem';
+      });
+      current = index;
+    }
+
+    tabs.forEach((btn, i) => btn.addEventListener('click', () => goTo(i)));
+    dots.forEach((dot, i) => dot.addEventListener('click', () => goTo(i)));
+
+    // Auto-advance every 5s
+    setInterval(() => goTo((current + 1) % slides.length), 5000);
+
+    goTo(0);
+  }
+
+  document.addEventListener('DOMContentLoaded', initSlider);
+</script>
 </Layout>
