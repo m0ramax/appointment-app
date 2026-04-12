@@ -1,48 +1,37 @@
-# Astro Starter Kit: Basics
+# Tu Cita — Frontend
 
-```sh
-npm create astro@latest -- --template basics
+Frontend del sistema de agendamiento Tu Cita. Construido con Astro + React + Tailwind, deployado en Vercel.
+
+## Stack
+
+- **Astro 5** — framework principal
+- **React** — componentes interactivos
+- **Tailwind CSS** — estilos
+- **Axios** — llamadas a la API
+
+## Desarrollo local
+
+```bash
+npm install
+npm run dev       # http://localhost:4321
+npm run build
+npm run preview
 ```
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/astro/tree/latest/examples/basics)
-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/astro/tree/latest/examples/basics)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/withastro/astro?devcontainer_path=.devcontainer/basics/devcontainer.json)
+## Variables de entorno
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
-
-![just-the-basics](https://github.com/withastro/astro/assets/2244813/a0a5533c-a856-4198-8470-2d67b1d7c554)
-
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-│   └── favicon.svg
-├── src/
-│   ├── layouts/
-│   │   └── Layout.astro
-│   └── pages/
-│       └── index.astro
-└── package.json
+```
+PUBLIC_API_URL=http://localhost:3000
 ```
 
-To learn more about the folder structure of an Astro project, refer to [our guide on project structure](https://docs.astro.build/en/basics/project-structure/).
+## Estructura
 
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+```
+src/
+├── components/     — Componentes React (auth, appointments, layout, work-schedule)
+├── config/         — Configuración global (APP_NAME, etc.)
+├── layouts/        — Layout base con navegación y tema
+├── lib/api/        — Servicios HTTP (auth, appointments, work-schedule)
+├── pages/          — Rutas Astro
+└── styles/         — CSS global y variables de tema (dark/light)
+```
