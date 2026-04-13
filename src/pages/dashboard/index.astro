@@ -119,7 +119,8 @@ import AppointmentList from "../../components/appointments/AppointmentList";
     if (!authService.isAuthenticated()) { window.location.href = '/login'; return false; }
     const user = await authService.getProfile();
     if (!user) { window.location.href = '/login'; return false; }
-    if (user.role === 'provider') { window.location.href = '/provider/dashboard'; return false; }
+    const role = user.role?.toUpperCase();
+    if (role === 'PROVIDER' || role === 'OWNER') { window.location.href = '/provider/dashboard'; return false; }
     return user;
   }
 

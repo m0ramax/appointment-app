@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { workScheduleService, type WorkSchedule, type WorkScheduleCreate, type WorkScheduleUpdate } from "../../lib/api/work-schedule";
+import { workScheduleService, type WorkSchedule, type WorkScheduleCreate, type WorkScheduleUpdate, type TeamMember } from "../../lib/api/work-schedule";
 import { authService } from "../../lib/api/auth";
 
 interface WorkScheduleManagerProps {
@@ -22,15 +22,31 @@ export default function WorkScheduleManager({ onScheduleUpdate }: WorkScheduleMa
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [editingDay, setEditingDay] = useState<string | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [selectedProviderId, setSelectedProviderId] = useState<number | undefined>(undefined);
+  const [currentUserId, setCurrentUserId] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     authService.getProfile().then(user => {
-      const role = user?.role?.toUpperCase();
-      if (role === "PROVIDER" || role === "OWNER") {
-        loadScheduleData();
-      } else {
+      if (!user) { setError("Error al obtener información del usuario"); setLoading(false); return; }
+      const role = user.role?.toUpperCase();
+      if (role !== "PROVIDER" && role !== "OWNER") {
         setError("No tienes permisos para gestionar horarios");
         setLoading(false);
+        return;
+      }
+      setCurrentUserId(user.id);
+      if (role === "OWNER") {
+        setIsOwner(true);
+        workScheduleService.getTeam().then(members => {
+          setTeam(members);
+          setSelectedProviderId(user.id);
+        }).catch(() => {
+          setSelectedProviderId(user.id);
+        });
+      } else {
+        setSelectedProviderId(user.id);
       }
     }).catch(() => {
       setError("Error al obtener información del usuario");
@@ -38,18 +54,23 @@ export default function WorkScheduleManager({ onScheduleUpdate }: WorkScheduleMa
     });
   }, []);
 
+  useEffect(() => {
+    if (selectedProviderId !== undefined) loadScheduleData();
+  }, [selectedProviderId]);
+
+  const forProvider = isOwner && selectedProviderId !== currentUserId ? selectedProviderId : undefined;
+
   const loadScheduleData = async () => {
     setLoading(true);
     setError("");
+    setEditingDay(null);
     try {
       const [schedulesData, settingsData] = await Promise.all([
-        workScheduleService.getMyWorkSchedules(),
+        workScheduleService.getMyWorkSchedules(forProvider),
         workScheduleService.getMySettings().catch(() => null),
       ]);
       setSchedules(schedulesData);
-      if (settingsData?.defaultSlotDuration) {
-        setDefaultSlotDuration(settingsData.defaultSlotDuration);
-      }
+      if (settingsData?.defaultSlotDuration) setDefaultSlotDuration(settingsData.defaultSlotDuration);
     } catch {
       setError("Error al cargar los horarios");
     } finally {
@@ -65,7 +86,7 @@ export default function WorkScheduleManager({ onScheduleUpdate }: WorkScheduleMa
         endTime: "17:00",
         slotDurationMinutes: defaultSlotDuration,
       };
-      await workScheduleService.createWorkSchedule(newSchedule);
+      await workScheduleService.createWorkSchedule(newSchedule, forProvider);
       await loadScheduleData();
       onScheduleUpdate?.();
       setEditingDay(null);
@@ -98,6 +119,12 @@ export default function WorkScheduleManager({ onScheduleUpdate }: WorkScheduleMa
   const getScheduleForDay = (dayOfWeek: string): WorkSchedule | null =>
     schedules.find(s => s.dayOfWeek === dayOfWeek && s.isActive) || null;
 
+  const getMemberLabel = (m: TeamMember) => {
+    const name = m.email.split("@")[0];
+    const suffix = m.role === "OWNER" ? " (tú)" : "";
+    return name.charAt(0).toUpperCase() + name.slice(1) + suffix;
+  };
+
   if (loading) {
     return (
       <div className="text-center py-10">
@@ -115,6 +142,28 @@ export default function WorkScheduleManager({ onScheduleUpdate }: WorkScheduleMa
           Actualizar
         </button>
       </div>
+
+      {/* Team selector for OWNER */}
+      {isOwner && team.length > 0 && (
+        <div className="bg-pm-surface border border-pm-border rounded-xl p-4">
+          <label className="block text-xs font-medium text-pm-muted mb-2">Gestionando horario de</label>
+          <div className="flex flex-wrap gap-2">
+            {team.map(member => (
+              <button
+                key={member.id}
+                onClick={() => setSelectedProviderId(member.id)}
+                className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                  selectedProviderId === member.id
+                    ? "border-pm-gold bg-pm-gold-dim text-pm-gold"
+                    : "border-pm-border text-pm-muted hover:border-pm-gold hover:text-pm-gold"
+                }`}
+              >
+                {getMemberLabel(member)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-400/10 border border-red-400/20 text-red-400 px-4 py-3 rounded-lg text-sm">

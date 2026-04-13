@@ -1,5 +1,11 @@
 import { apiClient } from "./auth";
 
+export interface TeamMember {
+  id: number;
+  email: string;
+  role: string;
+}
+
 export interface WorkSchedule {
   id: number;
   providerId: number;
@@ -75,13 +81,15 @@ export interface ProviderAvailability {
 export const workScheduleService = {
   // ── Schedules ──────────────────────────────────────────────────────────────
 
-  async createWorkSchedule(schedule: WorkScheduleCreate): Promise<WorkSchedule> {
-    const response = await apiClient.post<WorkSchedule>("/work-schedules", schedule);
+  async createWorkSchedule(schedule: WorkScheduleCreate, forProvider?: number): Promise<WorkSchedule> {
+    const url = forProvider ? `/work-schedules?forProvider=${forProvider}` : "/work-schedules";
+    const response = await apiClient.post<WorkSchedule>(url, schedule);
     return response.data;
   },
 
-  async getMyWorkSchedules(): Promise<WorkSchedule[]> {
-    const response = await apiClient.get<WorkSchedule[]>("/work-schedules");
+  async getMyWorkSchedules(forProvider?: number): Promise<WorkSchedule[]> {
+    const url = forProvider ? `/work-schedules?forProvider=${forProvider}` : "/work-schedules";
+    const response = await apiClient.get<WorkSchedule[]>(url);
     return response.data;
   },
 
@@ -133,6 +141,11 @@ export const workScheduleService = {
   },
 
   // ── Utils ──────────────────────────────────────────────────────────────────
+
+  async getTeam(): Promise<TeamMember[]> {
+    const response = await apiClient.get<TeamMember[]>("/business/team");
+    return response.data;
+  },
 
   getDayName(dayOfWeek: string): string {
     const days: Record<string, string> = {

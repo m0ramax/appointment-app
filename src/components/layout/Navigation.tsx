@@ -5,10 +5,19 @@ import ThemeToggle from "./ThemeToggle";
 
 export default function Navigation() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [role, setRole] = useState<string>("");
 
   useEffect(() => {
     setIsLoggedIn(authService.isAuthenticated());
+    if (authService.isAuthenticated()) {
+      authService.getProfile().then(user => {
+        if (user) setRole(user.role?.toUpperCase() ?? "");
+      }).catch(() => {});
+    }
   }, []);
+
+  const isClient = isLoggedIn && role === "CLIENT";
+  const isProvider = isLoggedIn && (role === "PROVIDER" || role === "OWNER");
 
   const handleLogout = async () => {
     await authService.logout();
@@ -33,7 +42,7 @@ export default function Navigation() {
               >
                 Inicio
               </a>
-              {isLoggedIn && (
+              {isClient && (
                 <>
                   <a
                     href="/appointments/new"
@@ -48,6 +57,14 @@ export default function Navigation() {
                     Mis Citas
                   </a>
                 </>
+              )}
+              {isProvider && (
+                <a
+                  href="/provider/dashboard"
+                  className="inline-flex items-center px-1 pt-1 text-sm font-medium text-pm-muted hover:text-pm-text border-b-2 border-transparent hover:border-pm-gold transition-colors"
+                >
+                  Mi Dashboard
+                </a>
               )}
             </div>
           </div>
