@@ -1,0 +1,40 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import TeamManager from "../../components/team/TeamManager";
+---
+
+<Layout title="Gestión de Equipo" description="Administra los proveedores de tu negocio">
+  <main class="py-10">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      <!-- Breadcrumb + Header -->
+      <div class="mb-8">
+        <nav class="flex items-center space-x-2 text-sm text-pm-dim mb-4">
+          <a href="/provider/dashboard" class="hover:text-pm-gold transition-colors">Dashboard</a>
+          <span>/</span>
+          <span class="text-pm-muted">Equipo</span>
+        </nav>
+        <h1 class="text-3xl font-bold text-pm-text">
+          Tu <span class="text-pm-gold">Equipo</span>
+        </h1>
+        <p class="mt-2 text-pm-muted">
+          Agrega y administra los proveedores de tu negocio.
+        </p>
+      </div>
+
+      <TeamManager client:load />
+    </div>
+  </main>
+</Layout>
+
+<script>
+  import { authService } from "../../lib/api/auth.ts";
+
+  async function checkAuth() {
+    if (!authService.isAuthenticated()) { window.location.href = '/login'; return; }
+    const user = await authService.getProfile();
+    if (!user) { window.location.href = '/login'; return; }
+    if (user.role?.toUpperCase() !== 'OWNER') { window.location.href = '/provider/dashboard'; return; }
+  }
+
+  document.addEventListener('DOMContentLoaded', checkAuth);
+</script>

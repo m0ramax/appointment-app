@@ -3,13 +3,13 @@ import { workScheduleService, type WorkSchedule, type WorkScheduleCreate, type T
 import { authService } from "../../lib/api/auth";
 
 const DAYS = [
-  { id: "MONDAY",    short: "Lun" },
-  { id: "TUESDAY",   short: "Mar" },
-  { id: "WEDNESDAY", short: "Mié" },
-  { id: "THURSDAY",  short: "Jue" },
-  { id: "FRIDAY",    short: "Vie" },
-  { id: "SATURDAY",  short: "Sáb" },
-  { id: "SUNDAY",    short: "Dom" },
+  { id: "MONDAY",    short: "Lun", jsDay: 1 },
+  { id: "TUESDAY",   short: "Mar", jsDay: 2 },
+  { id: "WEDNESDAY", short: "Mié", jsDay: 3 },
+  { id: "THURSDAY",  short: "Jue", jsDay: 4 },
+  { id: "FRIDAY",    short: "Vie", jsDay: 5 },
+  { id: "SATURDAY",  short: "Sáb", jsDay: 6 },
+  { id: "SUNDAY",    short: "Dom", jsDay: 0 },
 ];
 
 const HOURS: string[] = [];
@@ -34,6 +34,34 @@ function minutesToTime(n: number) {
   return `${Math.floor(n / 60).toString().padStart(2, "0")}:${(n % 60).toString().padStart(2, "0")}`;
 }
 
+/** Returns the Monday of the week containing `date` */
+function getMondayOfWeek(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getDay(); // 0=Sun
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/** Add days to a date */
+function addDays(date: Date, n: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+
+/** Format as "14/04" */
+function formatShortDate(date: Date): string {
+  return `${date.getDate().toString().padStart(2, "0")}/${(date.getMonth() + 1).toString().padStart(2, "0")}`;
+}
+
+/** Format month/year for header: "Abr 2025" */
+function formatMonthYear(date: Date): string {
+  const months = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  return `${months[date.getMonth()]} ${date.getFullYear()}`;
+}
+
 interface ActiveSlot {
   memberId: number;
   colorIdx: number;
@@ -43,6 +71,7 @@ interface ActiveSlot {
 interface ModalState {
   day: string;
   hour: string;
+  date: Date;
   active: ActiveSlot[];
 }
 
@@ -54,6 +83,15 @@ export default function TeamScheduleGrid() {
   const [error, setError] = useState("");
   const [modal, setModal] = useState<ModalState | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = current week
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const weekStart = addDays(getMondayOfWeek(today), weekOffset * 7);
+  const weekEnd = addDays(weekStart, 6);
+
+  // Date for each column (Mon=0 … Sun=6)
+  const colDates = DAYS.map((_, i) => addDays(weekStart, i));
 
   useEffect(() => { init(); }, []);
 
@@ -104,8 +142,8 @@ export default function TeamScheduleGrid() {
     return result;
   }, [team, schedulesByMember]);
 
-  function openModal(day: string, hour: string) {
-    setModal({ day, hour, active: getActiveSlots(day, hour) });
+  function openModal(day: string, hour: string, date: Date) {
+    setModal({ day, hour, date, active: getActiveSlots(day, hour) });
   }
 
   async function handleToggle(memberId: number) {
@@ -118,26 +156,20 @@ export default function TeamScheduleGrid() {
 
     try {
       if (isActive) {
-        // Remove: find schedule and shrink or delete
         const schedules = schedulesByMember[memberId] ?? [];
         const schedule = schedules.find(s => s.dayOfWeek === day && s.isActive);
         if (schedule) {
           const start = timeToMinutes(schedule.startTime);
           const end = timeToMinutes(schedule.endTime);
-          // If this hour is at the start, move start forward
           if (hourMin === start && end > hourMin + 60) {
             await workScheduleService.updateWorkSchedule(schedule.id, { startTime: minutesToTime(hourMin + 60) });
           } else if (hourMin + 60 >= end && hourMin > start) {
-            // At the end, move end back
             await workScheduleService.updateWorkSchedule(schedule.id, { endTime: minutesToTime(hourMin) });
           } else if (start === hourMin && end === hourMin + 60) {
-            // Entire schedule is just this slot — delete it
             await workScheduleService.deleteWorkSchedule(schedule.id);
           }
-          // If in the middle, just leave it (can't split easily — user should use detailed view)
         }
       } else {
-        // Add: create or expand schedule
         const schedules = schedulesByMember[memberId] ?? [];
         const existing = schedules.find(s => s.dayOfWeek === day && s.isActive);
         if (existing) {
@@ -158,9 +190,7 @@ export default function TeamScheduleGrid() {
         }
       }
 
-      // Reload and update modal state
       await init();
-      // Recalculate active slots for modal after reload
       setModal(prev => prev ? { ...prev, active: getActiveSlots(prev.day, prev.hour) } : null);
     } catch {
       setError("Error al actualizar el horario");
@@ -176,6 +206,11 @@ export default function TeamScheduleGrid() {
     return name.charAt(0).toUpperCase() + name.slice(1);
   };
 
+  const isToday = (date: Date) =>
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate();
+
   if (loading) return (
     <div className="text-center py-10">
       <div className="animate-spin rounded-full h-10 w-10 border-2 border-pm-border border-t-pm-gold mx-auto"></div>
@@ -189,14 +224,43 @@ export default function TeamScheduleGrid() {
 
   return (
     <div className="space-y-4">
-      {/* Legend */}
-      <div className="flex flex-wrap gap-3">
-        {team.map((m, i) => (
-          <div key={m.id} className="flex items-center gap-1.5">
-            <div className={`w-2.5 h-2.5 rounded-full ${MEMBER_COLORS[i % MEMBER_COLORS.length].dot}`}></div>
-            <span className="text-xs text-pm-muted">{getMemberName(m.id)}{m.id === currentUserId ? " (tú)" : ""}</span>
-          </div>
-        ))}
+      {/* Legend + week navigator */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-3">
+          {team.map((m, i) => (
+            <div key={m.id} className="flex items-center gap-1.5">
+              <div className={`w-2.5 h-2.5 rounded-full ${MEMBER_COLORS[i % MEMBER_COLORS.length].dot}`}></div>
+              <span className="text-xs text-pm-muted">{getMemberName(m.id)}{m.id === currentUserId ? " (tú)" : ""}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Week navigator */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setWeekOffset(w => w - 1)}
+            className="w-7 h-7 flex items-center justify-center rounded-lg border border-pm-border text-pm-muted hover:border-pm-gold hover:text-pm-text transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <span className="text-xs text-pm-muted min-w-[120px] text-center">
+            {formatShortDate(weekStart)} – {formatShortDate(weekEnd)} · {formatMonthYear(weekStart)}
+          </span>
+          <button
+            onClick={() => setWeekOffset(w => w + 1)}
+            className="w-7 h-7 flex items-center justify-center rounded-lg border border-pm-border text-pm-muted hover:border-pm-gold hover:text-pm-text transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </button>
+          {weekOffset !== 0 && (
+            <button
+              onClick={() => setWeekOffset(0)}
+              className="text-xs text-pm-gold hover:text-pm-gold-light transition-colors ml-1"
+            >
+              Hoy
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Grid */}
@@ -206,21 +270,31 @@ export default function TeamScheduleGrid() {
             <thead>
               <tr className="border-b border-pm-border">
                 <th className="w-14 px-3 py-3 text-pm-dim font-normal"></th>
-                {DAYS.map(d => (
-                  <th key={d.id} className="px-2 py-3 text-center text-pm-muted font-semibold">{d.short}</th>
-                ))}
+                {DAYS.map((d, i) => {
+                  const date = colDates[i];
+                  const todayCol = isToday(date);
+                  return (
+                    <th key={d.id} className={`px-2 py-2 text-center font-semibold ${todayCol ? "text-pm-gold" : "text-pm-muted"}`}>
+                      <div>{d.short}</div>
+                      <div className={`text-xs font-normal mt-0.5 ${todayCol ? "text-pm-gold" : "text-pm-dim"}`}>
+                        {formatShortDate(date)}
+                      </div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
               {HOURS.map((hour) => (
                 <tr key={hour} className="border-t border-pm-border/40">
                   <td className="px-3 py-0.5 text-pm-dim text-right text-xs w-14 align-middle">{hour}</td>
-                  {DAYS.map(day => {
+                  {DAYS.map((day, i) => {
                     const slots = getActiveSlots(day.id, hour);
+                    const todayCol = isToday(colDates[i]);
                     return (
-                      <td key={day.id} className="px-1 py-0.5">
+                      <td key={day.id} className={`px-1 py-0.5 ${todayCol ? "bg-pm-gold/5" : ""}`}>
                         <button
-                          onClick={() => openModal(day.id, hour)}
+                          onClick={() => openModal(day.id, hour, colDates[i])}
                           className={`w-full h-7 rounded border transition-all flex items-center justify-center gap-0.5 px-1
                             ${slots.length > 0
                               ? "border-pm-border/60 bg-pm-elevated/60 hover:opacity-80"
@@ -256,7 +330,7 @@ export default function TeamScheduleGrid() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setModal(null)}>
           <div className="bg-pm-surface border border-pm-border rounded-2xl p-6 w-80 shadow-premium" onClick={e => e.stopPropagation()}>
             <h3 className="text-sm font-semibold text-pm-text mb-0.5">
-              {DAYS.find(d => d.id === modal.day)?.short} — {modal.hour}
+              {DAYS.find(d => d.id === modal.day)?.short} {formatShortDate(modal.date)} — {modal.hour}
             </h3>
             <p className="text-xs text-pm-muted mb-4">Selecciona quién trabaja en este bloque</p>
 

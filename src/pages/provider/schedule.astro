@@ -58,7 +58,7 @@ import TeamScheduleGrid from "../../components/work-schedule/TeamScheduleGrid";
     if (!authService.isAuthenticated()) { window.location.href = '/login'; return; }
     const user = await authService.getProfile();
     if (!user) { window.location.href = '/login'; return; }
-    if (user.role?.toUpperCase() === 'CLIENT') { window.location.href = '/dashboard'; return; }
+    if (user.role?.toUpperCase() !== 'OWNER') { window.location.href = '/provider/dashboard'; return; }
   }
 
   window.switchTab = function(tab: string) {

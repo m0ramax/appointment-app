@@ -2,6 +2,7 @@
 import Layout from "../../../layouts/Layout.astro";
 import AppointmentList from "../../../components/appointments/AppointmentList";
 import WorkScheduleManager from "../../../components/work-schedule/WorkScheduleManager";
+import MyWeeklySchedule from "../../../components/work-schedule/MyWeeklySchedule";
 ---
 
 <Layout title="Dashboard de Proveedor" description="Gestiona tus citas y disponibilidad">
@@ -28,8 +29,16 @@ import WorkScheduleManager from "../../../components/work-schedule/WorkScheduleM
             Actualizar
           </button>
           <a
+            id="btn-team"
+            href="/provider/team"
+            class="hidden inline-flex items-center px-4 py-2 border border-pm-border rounded-lg text-sm font-medium text-pm-muted hover:text-pm-text hover:border-pm-gold transition-colors"
+          >
+            Equipo
+          </a>
+          <a
+            id="btn-schedule"
             href="/provider/schedule"
-            class="inline-flex items-center px-4 py-2 text-sm font-semibold rounded-lg text-pm-bg bg-pm-gold hover:bg-pm-gold-light transition-colors"
+            class="hidden inline-flex items-center px-4 py-2 text-sm font-semibold rounded-lg text-pm-bg bg-pm-gold hover:bg-pm-gold-light transition-colors"
           >
             Configurar Horarios
           </a>
@@ -112,12 +121,25 @@ import WorkScheduleManager from "../../../components/work-schedule/WorkScheduleM
             Ver Citas de Hoy
           </button>
           <a
+            id="quick-schedule"
             href="/provider/schedule"
-            class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-pm-bg bg-pm-gold hover:bg-pm-gold-light transition-colors"
+            class="hidden inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium text-pm-bg bg-pm-gold hover:bg-pm-gold-light transition-colors"
           >
             Gestionar Horarios
           </a>
+          <a
+            id="quick-team"
+            href="/provider/team"
+            class="hidden inline-flex items-center px-4 py-2 border border-pm-border rounded-lg text-sm font-medium text-pm-muted hover:text-pm-text hover:border-pm-gold transition-colors"
+          >
+            Gestionar Equipo
+          </a>
         </div>
+      </div>
+
+      <!-- My Schedule (PROVIDER only) -->
+      <div id="my-schedule-section" class="hidden mt-8 bg-pm-surface border border-pm-border rounded-xl p-5">
+        <MyWeeklySchedule client:load />
       </div>
 
       <!-- Appointments List -->
@@ -148,6 +170,13 @@ import WorkScheduleManager from "../../../components/work-schedule/WorkScheduleM
       const capitalizedName = userName.charAt(0).toUpperCase() + userName.slice(1);
       const providerInfoEl = document.getElementById('provider-info');
       if (providerInfoEl) providerInfoEl.textContent = `Dr. ${capitalizedName}`;
+      if (user.role?.toUpperCase() === 'OWNER') {
+        document.getElementById('btn-team')?.classList.remove('hidden');
+        document.getElementById('btn-schedule')?.classList.remove('hidden');
+        document.getElementById('quick-team')?.classList.remove('hidden');
+        document.getElementById('quick-schedule')?.classList.remove('hidden');
+      }
+      document.getElementById('my-schedule-section')?.classList.remove('hidden');
       const appointments = await appointmentService.getUserAppointments();
       document.getElementById('total-appointments')!.textContent = appointments.length.toString();
       document.getElementById('pending-appointments')!.textContent = appointments.filter(a => a.status === 'PENDING').length.toString();
