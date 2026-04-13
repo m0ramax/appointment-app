@@ -39,6 +39,7 @@ export interface Appointment {
   serviceId?: number;
   createdAt: string;
   updatedAt: string;
+  client?: { id: number; email: string };
 }
 
 export const appointmentService = {
