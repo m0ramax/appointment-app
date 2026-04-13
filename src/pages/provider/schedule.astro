@@ -1,12 +1,12 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import WorkScheduleManager from "../../components/work-schedule/WorkScheduleManager";
-import SimpleScheduleTest from "../../components/work-schedule/SimpleScheduleTest";
+import TeamScheduleGrid from "../../components/work-schedule/TeamScheduleGrid";
 ---
 
 <Layout title="Configuración de Horarios" description="Configura tus horarios de trabajo y disponibilidad">
   <main class="py-10">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Breadcrumb + Header -->
       <div class="mb-8">
         <nav class="flex items-center space-x-2 text-sm text-pm-dim mb-4">
@@ -18,12 +18,35 @@ import SimpleScheduleTest from "../../components/work-schedule/SimpleScheduleTes
           Configuración de <span class="text-pm-gold">Horarios</span>
         </h1>
         <p class="mt-2 text-pm-muted">
-          Configura tus horarios de trabajo, días de descanso y disponibilidad para citas.
+          Configura los horarios de trabajo y disponibilidad para citas.
         </p>
       </div>
 
-      <SimpleScheduleTest client:load />
-      <WorkScheduleManager client:load />
+      <!-- Tabs -->
+      <div class="flex gap-2 mb-6 border-b border-pm-border">
+        <button
+          id="tab-grid"
+          onclick="switchTab('grid')"
+          class="px-4 py-2 text-sm font-medium border-b-2 border-pm-gold text-pm-gold -mb-px transition-colors"
+        >
+          Vista por bloques
+        </button>
+        <button
+          id="tab-list"
+          onclick="switchTab('list')"
+          class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-pm-muted hover:text-pm-text transition-colors"
+        >
+          Configuración detallada
+        </button>
+      </div>
+
+      <div id="view-grid">
+        <TeamScheduleGrid client:load />
+      </div>
+
+      <div id="view-list" class="hidden">
+        <WorkScheduleManager client:load />
+      </div>
     </div>
   </main>
 </Layout>
@@ -35,8 +58,27 @@ import SimpleScheduleTest from "../../components/work-schedule/SimpleScheduleTes
     if (!authService.isAuthenticated()) { window.location.href = '/login'; return; }
     const user = await authService.getProfile();
     if (!user) { window.location.href = '/login'; return; }
-    if (user.role === 'client') { window.location.href = '/dashboard'; return; }
+    if (user.role?.toUpperCase() === 'CLIENT') { window.location.href = '/dashboard'; return; }
   }
+
+  window.switchTab = function(tab: string) {
+    const grid = document.getElementById('view-grid')!;
+    const list = document.getElementById('view-list')!;
+    const tabGrid = document.getElementById('tab-grid')!;
+    const tabList = document.getElementById('tab-list')!;
+
+    if (tab === 'grid') {
+      grid.classList.remove('hidden');
+      list.classList.add('hidden');
+      tabGrid.className = 'px-4 py-2 text-sm font-medium border-b-2 border-pm-gold text-pm-gold -mb-px transition-colors';
+      tabList.className = 'px-4 py-2 text-sm font-medium border-b-2 border-transparent text-pm-muted hover:text-pm-text transition-colors';
+    } else {
+      list.classList.remove('hidden');
+      grid.classList.add('hidden');
+      tabList.className = 'px-4 py-2 text-sm font-medium border-b-2 border-pm-gold text-pm-gold -mb-px transition-colors';
+      tabGrid.className = 'px-4 py-2 text-sm font-medium border-b-2 border-transparent text-pm-muted hover:text-pm-text transition-colors';
+    }
+  };
 
   document.addEventListener('DOMContentLoaded', checkAuth);
 </script>
