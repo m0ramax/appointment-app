@@ -117,9 +117,9 @@ export default function ManualAppointmentModal({ businessId, onClose, onCreated 
             >
               <option value="">Seleccionar proveedor</option>
               {team.map(m => (
-                <option key={m.id} value={m.id} className="bg-pm-elevated">
+                <option key={m.id} value={String(m.id)} className="bg-pm-elevated">
                   {m.email.split("@")[0].charAt(0).toUpperCase() + m.email.split("@")[0].slice(1)}
-                  {m.role === "OWNER" ? " (tú)" : ""}
+                  {m.role === "OWNER" ? " (Propietario)" : " (Proveedor)"}
                 </option>
               ))}
             </select>

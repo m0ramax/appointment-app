@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { authService } from "../../lib/api/auth";
 import { appointmentService, type AppointmentWithParties } from "../../lib/api/appointments";
 import { workScheduleService, type TeamMember, type WorkSchedule } from "../../lib/api/work-schedule";
+import { PROVIDER_COLORS } from "../../lib/providerColors";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -9,19 +10,13 @@ const START_HOUR = 7;
 const END_HOUR   = 21;
 const HOUR_PX    = 64;
 
-const BLOCK_COLORS = [
-  { bg: "bg-blue-500/30 border-blue-400/60",     text: "text-blue-200" },
-  { bg: "bg-green-500/30 border-green-400/60",   text: "text-green-200" },
-  { bg: "bg-purple-500/30 border-purple-400/60", text: "text-purple-200" },
-  { bg: "bg-amber-500/30 border-amber-400/60",   text: "text-amber-200" },
-  { bg: "bg-rose-500/30 border-rose-400/60",     text: "text-rose-200" },
-  { bg: "bg-teal-500/30 border-teal-400/60",     text: "text-teal-200" },
-  { bg: "bg-indigo-500/30 border-indigo-400/60", text: "text-indigo-200" },
-];
-
-const MEMBER_COLORS = [
-  "text-blue-400","text-green-400","text-purple-400","text-amber-400","text-rose-400",
-];
+// Status is communicated via border style + opacity modifier
+const STATUS_MODIFIER: Record<string, string> = {
+  PENDING:   "border-dashed opacity-75",
+  CONFIRMED: "",
+  COMPLETED: "opacity-50",
+  CANCELLED: "opacity-30",
+};
 
 const DAY_SHORT = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
 const MONTH_SHORT = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
@@ -51,7 +46,7 @@ function getMondayOfWeek(d: Date) {
 }
 function apptTopPx(dt: string) {
   const d = new Date(dt);
-  return ((d.getUTCHours() - START_HOUR) + d.getUTCMinutes() / 60) * HOUR_PX;
+  return ((d.getHours() - START_HOUR) + d.getMinutes() / 60) * HOUR_PX;
 }
 function apptHeightPx(min: number) { return Math.max((min / 60) * HOUR_PX, 20); }
 function personName(email?: string, fallback?: string) {
@@ -61,7 +56,7 @@ function personName(email?: string, fallback?: string) {
 }
 function formatTime(dt: string) {
   const d = new Date(dt);
-  return `${d.getUTCHours().toString().padStart(2,"0")}:${d.getUTCMinutes().toString().padStart(2,"0")}`;
+  return `${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
 }
 
 // ── ScheduleTable ─────────────────────────────────────────────────────────────
@@ -96,7 +91,7 @@ function ScheduleTable({ team, schedules, userId }: ScheduleTableProps) {
                 return (
                   <tr key={member.id} className="border-b border-pm-border/40 last:border-0">
                     <td className="py-2 px-3">
-                      <span className={`font-medium ${MEMBER_COLORS[idx % MEMBER_COLORS.length]}`}>
+                      <span className={`font-medium ${PROVIDER_COLORS[idx % PROVIDER_COLORS.length].label}`}>
                         {personName(member.email)}
                         {member.id === userId ? " (tú)" : ""}
                       </span>
@@ -144,11 +139,12 @@ interface WeekCalendarProps {
   setWeekOffset: (fn: (n: number) => number) => void;
   appointments: AppointmentWithParties[];
   isOwner: boolean;
+  team: TeamMember[];
 }
 
 function WeekCalendar({
   weekDays, weekStart, weekEnd, weekOffset, setWeekOffset,
-  appointments, isOwner,
+  appointments, isOwner, team,
 }: WeekCalendarProps) {
   const today    = (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })();
   const todayStr = toLocalDateStr(today);
@@ -159,13 +155,71 @@ function WeekCalendar({
   const now    = new Date();
   const nowTop = ((now.getHours() - START_HOUR) + now.getMinutes() / 60) * HOUR_PX;
 
-  const apptColor = (id: number) => BLOCK_COLORS[id % BLOCK_COLORS.length];
+  const providerColorIdx = (providerId: number) => {
+    const idx = team.findIndex(m => m.id === providerId);
+    return idx >= 0 ? idx : 0;
+  };
+  const apptStyle = (appt: AppointmentWithParties) => {
+    const color    = PROVIDER_COLORS[providerColorIdx(appt.providerId) % PROVIDER_COLORS.length];
+    const modifier = STATUS_MODIFIER[appt.status] ?? "";
+    return { color, modifier };
+  };
 
   function apptsOnDay(ds: string) {
     return appointments.filter(a =>
       a.status !== "CANCELLED" &&
       toLocalDateStr(new Date(a.dateTime)) === ds
     );
+  }
+
+  // Assigns a column index and total-columns count to each appointment so
+  // overlapping ones are displayed side by side instead of stacked.
+  function layoutAppointments(appts: AppointmentWithParties[]) {
+    const sorted = [...appts].sort(
+      (a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()
+    );
+    const colOf   = new Map<number, number>();
+    const endMs   = new Map<number, number>();
+    const columns: AppointmentWithParties[][] = [];
+
+    for (const appt of sorted) {
+      const start = new Date(appt.dateTime).getTime();
+      const end   = start + appt.durationMinutes * 60_000;
+      endMs.set(appt.id, end);
+
+      let placed = false;
+      for (let c = 0; c < columns.length; c++) {
+        const last    = columns[c][columns[c].length - 1];
+        if ((endMs.get(last.id) ?? 0) <= start) {
+          columns[c].push(appt);
+          colOf.set(appt.id, c);
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        colOf.set(appt.id, columns.length);
+        columns.push([appt]);
+      }
+    }
+
+    // For each appointment, the total columns = max column index among all
+    // appointments that overlap with it, plus 1.
+    const totalOf = new Map<number, number>();
+    for (const appt of sorted) {
+      const start = new Date(appt.dateTime).getTime();
+      const end   = endMs.get(appt.id)!;
+      let maxCol  = colOf.get(appt.id)!;
+      for (const other of sorted) {
+        if (other.id === appt.id) continue;
+        const os = new Date(other.dateTime).getTime();
+        const oe = endMs.get(other.id)!;
+        if (start < oe && end > os) maxCol = Math.max(maxCol, colOf.get(other.id)!);
+      }
+      totalOf.set(appt.id, maxCol + 1);
+    }
+
+    return { colOf, totalOf };
   }
 
   return (
@@ -229,10 +283,8 @@ function WeekCalendar({
                       {d.getDate()}
                     </div>
                     {count > 0 && (
-                      <div className="flex justify-center gap-0.5 mt-1">
-                        {Array.from({ length: Math.min(count, 3) }).map((_, i) => (
-                          <span key={i} className="w-1 h-1 rounded-full bg-green-400" />
-                        ))}
+                      <div className="mt-1 text-[10px] font-medium text-pm-muted leading-none">
+                        {count} {count === 1 ? "cita" : "citas"}
                       </div>
                     )}
                   </div>
@@ -283,30 +335,41 @@ function WeekCalendar({
                     )}
 
                     {/* Appointments */}
-                    {dayAppts.map(appt => {
-                      const color  = apptColor(appt.id);
-                      const top    = apptTopPx(appt.dateTime);
-                      const height = apptHeightPx(appt.durationMinutes);
-                      const label  = personName(appt.client?.email, `Cliente #${appt.clientId}`);
-                      const sub    = isOwner
-                        ? personName(appt.provider?.email, `Prov. #${appt.providerId}`)
-                        : appt.title;
-                      return (
-                        <div
-                          key={appt.id}
-                          className={`absolute left-0.5 right-0.5 rounded border px-1.5 py-1 z-20 overflow-hidden cursor-default ${color.bg}`}
-                          style={{ top: top + 1, height: height - 2 }}
-                          title={`${label} · ${appt.title} · ${appt.durationMinutes}min`}
-                        >
-                          <p className={`text-xs font-semibold leading-tight truncate ${color.text}`}>
-                            {formatTime(appt.dateTime)} · {label}
-                          </p>
-                          {height >= 38 && (
-                            <p className={`text-xs opacity-80 truncate ${color.text}`}>{sub}</p>
-                          )}
-                        </div>
-                      );
-                    })}
+                    {(() => {
+                      const { colOf, totalOf } = layoutAppointments(dayAppts);
+                      return dayAppts.map(appt => {
+                        const { color, modifier } = apptStyle(appt);
+                        const top    = apptTopPx(appt.dateTime);
+                        const height = apptHeightPx(appt.durationMinutes);
+                        const label  = personName(appt.client?.email, `Cliente #${appt.clientId}`);
+                        const sub    = isOwner
+                          ? personName(appt.provider?.email, `Prov. #${appt.providerId}`)
+                          : appt.title;
+                        const col    = colOf.get(appt.id) ?? 0;
+                        const total  = totalOf.get(appt.id) ?? 1;
+                        const pct    = 100 / total;
+                        return (
+                          <div
+                            key={appt.id}
+                            className={`absolute rounded border px-1.5 py-1 z-20 overflow-hidden cursor-default ${color.bg} ${color.border} ${modifier}`}
+                            style={{
+                              top:    top + 1,
+                              height: height - 2,
+                              left:   `calc(${col * pct}% + 2px)`,
+                              width:  `calc(${pct}% - 4px)`,
+                            }}
+                            title={`${label} · ${appt.title} · ${appt.durationMinutes}min`}
+                          >
+                            <p className={`text-xs font-semibold leading-tight truncate ${color.text}`}>
+                              {formatTime(appt.dateTime)} · {label}
+                            </p>
+                            {height >= 38 && (
+                              <p className={`text-xs opacity-80 truncate ${color.text}`}>{sub}</p>
+                            )}
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 );
               })}
@@ -315,10 +378,28 @@ function WeekCalendar({
         </div>
       </div>
 
-      <div className="flex gap-4 text-xs text-pm-dim">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-pm-dim">
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-1 bg-pm-gold rounded-full" />
           Ahora
+        </span>
+        {team.map((member, idx) => {
+          const color = PROVIDER_COLORS[idx % PROVIDER_COLORS.length];
+          return (
+            <span key={member.id} className="flex items-center gap-1.5">
+              <span className={`w-2.5 h-2.5 rounded-sm ${color.bg} border ${color.border}`} />
+              <span className={color.label}>{personName(member.email)}</span>
+            </span>
+          );
+        })}
+        <span className="flex items-center gap-1.5 ml-2 border-l border-pm-border/40 pl-2">
+          <span className="w-3 h-3 rounded-sm border border-dashed border-pm-muted/60 opacity-75" /> Pendiente
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-sm border border-pm-muted/60" /> Confirmada
+        </span>
+        <span className="flex items-center gap-1.5 opacity-50">
+          <span className="w-3 h-3 rounded-sm border border-pm-muted/60" /> Completada
         </span>
       </div>
     </div>
@@ -335,6 +416,7 @@ export default function DayScheduleGrid() {
   const [appointments, setAppointments] = useState<AppointmentWithParties[]>([]);
   const [loading, setLoading]   = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const todayInit = () => { const d = new Date(); d.setHours(0,0,0,0); return d; };
   const today     = todayInit();
@@ -343,6 +425,14 @@ export default function DayScheduleGrid() {
   const weekStart = addDays(getMondayOfWeek(today), weekOffset * 7);
   const weekDays  = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const weekEnd   = addDays(weekStart, 6);
+
+  // ── Listen for status updates from AppointmentList ──────────────────────────
+
+  useEffect(() => {
+    const handler = () => setRefreshKey(k => k + 1);
+    window.addEventListener("appointment-updated", handler);
+    return () => window.removeEventListener("appointment-updated", handler);
+  }, []);
 
   // ── Init ────────────────────────────────────────────────────────────────────
 
@@ -385,7 +475,7 @@ export default function DayScheduleGrid() {
         .then(all => setAppointments(all as AppointmentWithParties[]))
         .catch(() => {});
     }
-  }, [weekOffset, loading, role]);
+  }, [weekOffset, loading, role, refreshKey]);
 
   // ── Loading ──────────────────────────────────────────────────────────────────
 
@@ -407,6 +497,7 @@ export default function DayScheduleGrid() {
         setWeekOffset={setWeekOffset}
         appointments={appointments}
         isOwner={isOwner}
+        team={team}
       />
     </div>
   );
