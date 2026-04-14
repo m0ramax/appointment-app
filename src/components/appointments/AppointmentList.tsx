@@ -1,25 +1,52 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { appointmentService, type Appointment } from "../../lib/api/appointments";
+import { appointmentService, type AppointmentWithParties } from "../../lib/api/appointments";
+import { authService } from "../../lib/api/auth";
+import { workScheduleService, type TeamMember } from "../../lib/api/work-schedule";
+import { PROVIDER_COLORS } from "../../lib/providerColors";
 
-interface AppointmentListProps {
-  userRole?: "client" | "provider" | "owner";
+function toDateStr(d: Date) {
+  return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,"0")}-${d.getDate().toString().padStart(2,"0")}`;
 }
 
-export default function AppointmentList({ userRole = "client" }: AppointmentListProps) {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+export default function AppointmentList() {
+  const [role, setRole] = useState("");
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [appointments, setAppointments] = useState<AppointmentWithParties[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
 
-  useEffect(() => { loadAppointments(); }, []);
+  useEffect(() => {
+    authService.getProfile()
+      .then(async user => {
+        if (!user) return;
+        const r = user.role?.toUpperCase() ?? "CLIENT";
+        setRole(r);
+        if (r === "OWNER") {
+          const members = await workScheduleService.getTeam();
+          setTeam(members);
+        }
+      })
+      .catch(() => setRole("CLIENT"));
+  }, []);
+
+  useEffect(() => { if (role) loadAppointments(); }, [role]);
 
   const loadAppointments = async () => {
     setLoading(true);
     setError("");
     try {
-      const userAppointments = await appointmentService.getUserAppointments();
-      setAppointments(userAppointments);
+      let data: AppointmentWithParties[];
+      if (role === "OWNER") {
+        const today = new Date();
+        const end = new Date(today);
+        end.setDate(end.getDate() + 30);
+        data = await appointmentService.getBusinessAppointmentsForWeek(toDateStr(today), toDateStr(end));
+      } else {
+        data = await appointmentService.getUserAppointments() as AppointmentWithParties[];
+      }
+      setAppointments(data);
     } catch (err: any) {
       setError("Error al cargar las citas");
     } finally {
@@ -36,6 +63,7 @@ export default function AppointmentList({ userRole = "client" }: AppointmentList
         default: await appointmentService.updateAppointment(appointmentId, { status: newStatus as any });
       }
       await loadAppointments();
+      window.dispatchEvent(new CustomEvent("appointment-updated"));
     } catch (err: any) {
       setError(err.response?.data?.message || "Error al actualizar la cita");
     }
@@ -46,9 +74,18 @@ export default function AppointmentList({ userRole = "client" }: AppointmentList
     try {
       await appointmentService.cancelAppointment(appointmentId);
       await loadAppointments();
+      window.dispatchEvent(new CustomEvent("appointment-updated"));
     } catch (err: any) {
       setError(err.response?.data?.message || "Error al cancelar la cita");
     }
+  };
+
+  const isOwner    = role === "OWNER";
+  const isProvider = role === "PROVIDER" || isOwner;
+
+  const providerColor = (providerId: number) => {
+    const idx = team.findIndex(m => m.id === providerId);
+    return PROVIDER_COLORS[(idx >= 0 ? idx : 0) % PROVIDER_COLORS.length];
   };
 
   const getStatusBadge = (status: string) => {
@@ -71,7 +108,6 @@ export default function AppointmentList({ userRole = "client" }: AppointmentList
     }
   };
 
-  const isProviderRole = userRole === "provider" || userRole === "owner";
 
   if (loading) {
     return (
@@ -106,9 +142,9 @@ export default function AppointmentList({ userRole = "client" }: AppointmentList
         </svg>
         <h3 className="mt-3 text-base font-medium text-pm-text">No hay citas</h3>
         <p className="mt-1 text-sm text-pm-muted">
-          {userRole === "client" ? "Aún no has agendado ninguna cita." : "No tienes citas asignadas."}
+          {isProvider ? (isOwner ? "No hay citas en los próximos 30 días." : "No tienes citas asignadas.") : "Aún no has agendado ninguna cita."}
         </p>
-        {userRole === "client" && (
+        {!isProvider && (
           <div className="mt-6">
             <a
               href="/appointments/new"
@@ -126,7 +162,7 @@ export default function AppointmentList({ userRole = "client" }: AppointmentList
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-base font-semibold text-pm-text">
-          {userRole === "client" ? "Mis Citas" : "Citas Asignadas"}
+          {isOwner ? "Citas del Negocio (próximos 30 días)" : isProvider ? "Citas Asignadas" : "Mis Citas"}
         </h2>
         <button
           onClick={loadAppointments}
@@ -163,6 +199,26 @@ export default function AppointmentList({ userRole = "client" }: AppointmentList
                       </svg>
                       {appointment.durationMinutes} min
                     </div>
+                    {isOwner && appointment.provider && (
+                      <div className="flex items-center text-xs text-pm-muted">
+                        <svg className="flex-shrink-0 mr-1 h-3.5 w-3.5 text-pm-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span className="text-pm-dim mr-1">Proveedor:</span>
+                        <span className={`font-medium ${providerColor(appointment.providerId).label}`}>
+                          {appointment.provider.email.split("@")[0]}
+                        </span>
+                      </div>
+                    )}
+                    {isProvider && appointment.client && (
+                      <div className="flex items-center text-xs text-pm-muted">
+                        <svg className="flex-shrink-0 mr-1 h-3.5 w-3.5 text-pm-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span className="text-pm-dim mr-1">Cliente:</span>
+                        {appointment.client.email.split("@")[0]}
+                      </div>
+                    )}
                   </div>
                   {appointment.description && (
                     <p className="mt-1 text-xs text-pm-dim">{appointment.description}</p>
@@ -170,7 +226,7 @@ export default function AppointmentList({ userRole = "client" }: AppointmentList
                 </div>
 
                 <div className="flex-shrink-0 flex items-center gap-2">
-                  {isProviderRole && appointment.status === "PENDING" && (
+                  {isProvider && appointment.status === "PENDING" && (
                     <>
                       <button
                         onClick={() => handleStatusUpdate(appointment.id, "CONFIRMED")}
@@ -187,7 +243,7 @@ export default function AppointmentList({ userRole = "client" }: AppointmentList
                     </>
                   )}
 
-                  {isProviderRole && appointment.status === "CONFIRMED" && (
+                  {isProvider && appointment.status === "CONFIRMED" && (
                     <>
                       <button
                         onClick={() => handleStatusUpdate(appointment.id, "COMPLETED")}
@@ -204,7 +260,7 @@ export default function AppointmentList({ userRole = "client" }: AppointmentList
                     </>
                   )}
 
-                  {userRole === "client" && (appointment.status === "PENDING" || appointment.status === "CONFIRMED") && (
+                  {!isProvider && (appointment.status === "PENDING" || appointment.status === "CONFIRMED") && (
                     <button
                       onClick={() => handleCancelAppointment(appointment.id)}
                       className="px-3 py-1.5 bg-red-600/70 hover:bg-red-600 text-white text-xs font-medium rounded-lg border border-red-600/30 transition-colors"
