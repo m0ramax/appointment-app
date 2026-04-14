@@ -18,12 +18,27 @@ export interface AppointmentCreate {
   providerId: number;
 }
 
+export interface ManualAppointmentCreate {
+  clientEmail: string;
+  providerId: number;
+  serviceId?: number;
+  title: string;
+  description?: string;
+  dateTime: string;
+  durationMinutes: number;
+}
+
 export interface AppointmentUpdate {
   title?: string;
   description?: string;
   dateTime?: string;
   durationMinutes?: number;
   status?: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
+}
+
+export interface AppointmentWithParties extends Omit<Appointment, 'client'> {
+  client?: { id: number; email: string };
+  provider?: { id: number; email: string };
 }
 
 export interface Appointment {
@@ -81,6 +96,23 @@ export const appointmentService = {
 
   async getProviders(): Promise<Provider[]> {
     const response = await apiClient.get<Provider[]>("/appointments/providers");
+    return response.data;
+  },
+
+  async createManualAppointment(data: ManualAppointmentCreate): Promise<Appointment> {
+    const response = await apiClient.post<Appointment>("/appointments/manual", data);
+    return response.data;
+  },
+
+  async getBusinessAppointments(date: string): Promise<AppointmentWithParties[]> {
+    const response = await apiClient.get<AppointmentWithParties[]>(`/appointments/business?date=${date}`);
+    return response.data;
+  },
+
+  async getBusinessAppointmentsForWeek(startDate: string, endDate: string): Promise<AppointmentWithParties[]> {
+    const response = await apiClient.get<AppointmentWithParties[]>(
+      `/appointments/business?startDate=${startDate}&endDate=${endDate}`
+    );
     return response.data;
   },
 };

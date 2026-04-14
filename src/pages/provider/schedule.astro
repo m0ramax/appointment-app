@@ -1,7 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import WorkScheduleManager from "../../components/work-schedule/WorkScheduleManager";
-import TeamScheduleGrid from "../../components/work-schedule/TeamScheduleGrid";
+import SchedulePageWrapper from "../../components/work-schedule/SchedulePageWrapper";
 ---
 
 <Layout title="Configuración de Horarios" description="Configura tus horarios de trabajo y disponibilidad">
@@ -22,31 +21,7 @@ import TeamScheduleGrid from "../../components/work-schedule/TeamScheduleGrid";
         </p>
       </div>
 
-      <!-- Tabs -->
-      <div class="flex gap-2 mb-6 border-b border-pm-border">
-        <button
-          id="tab-grid"
-          onclick="switchTab('grid')"
-          class="px-4 py-2 text-sm font-medium border-b-2 border-pm-gold text-pm-gold -mb-px transition-colors"
-        >
-          Vista por bloques
-        </button>
-        <button
-          id="tab-list"
-          onclick="switchTab('list')"
-          class="px-4 py-2 text-sm font-medium border-b-2 border-transparent text-pm-muted hover:text-pm-text transition-colors"
-        >
-          Configuración detallada
-        </button>
-      </div>
-
-      <div id="view-grid">
-        <TeamScheduleGrid client:load />
-      </div>
-
-      <div id="view-list" class="hidden">
-        <WorkScheduleManager client:load />
-      </div>
+      <SchedulePageWrapper client:load />
     </div>
   </main>
 </Layout>
@@ -60,25 +35,6 @@ import TeamScheduleGrid from "../../components/work-schedule/TeamScheduleGrid";
     if (!user) { window.location.href = '/login'; return; }
     if (user.role?.toUpperCase() !== 'OWNER') { window.location.href = '/provider/dashboard'; return; }
   }
-
-  window.switchTab = function(tab: string) {
-    const grid = document.getElementById('view-grid')!;
-    const list = document.getElementById('view-list')!;
-    const tabGrid = document.getElementById('tab-grid')!;
-    const tabList = document.getElementById('tab-list')!;
-
-    if (tab === 'grid') {
-      grid.classList.remove('hidden');
-      list.classList.add('hidden');
-      tabGrid.className = 'px-4 py-2 text-sm font-medium border-b-2 border-pm-gold text-pm-gold -mb-px transition-colors';
-      tabList.className = 'px-4 py-2 text-sm font-medium border-b-2 border-transparent text-pm-muted hover:text-pm-text transition-colors';
-    } else {
-      list.classList.remove('hidden');
-      grid.classList.add('hidden');
-      tabList.className = 'px-4 py-2 text-sm font-medium border-b-2 border-pm-gold text-pm-gold -mb-px transition-colors';
-      tabGrid.className = 'px-4 py-2 text-sm font-medium border-b-2 border-transparent text-pm-muted hover:text-pm-text transition-colors';
-    }
-  };
 
   document.addEventListener('DOMContentLoaded', checkAuth);
 </script>

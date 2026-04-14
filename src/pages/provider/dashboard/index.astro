@@ -2,7 +2,8 @@
 import Layout from "../../../layouts/Layout.astro";
 import AppointmentList from "../../../components/appointments/AppointmentList";
 import WorkScheduleManager from "../../../components/work-schedule/WorkScheduleManager";
-import MyWeeklySchedule from "../../../components/work-schedule/MyWeeklySchedule";
+import DayScheduleGrid from "../../../components/appointments/DayScheduleGrid";
+import ManualAppointmentTrigger from "../../../components/appointments/ManualAppointmentTrigger";
 ---
 
 <Layout title="Dashboard de Proveedor" description="Gestiona tus citas y disponibilidad">
@@ -35,6 +36,7 @@ import MyWeeklySchedule from "../../../components/work-schedule/MyWeeklySchedule
           >
             Equipo
           </a>
+          <ManualAppointmentTrigger client:load />
           <a
             id="btn-schedule"
             href="/provider/schedule"
@@ -114,12 +116,6 @@ import MyWeeklySchedule from "../../../components/work-schedule/MyWeeklySchedule
           >
             Confirmar Pendientes
           </button>
-          <button
-            onclick="viewToday()"
-            class="inline-flex items-center px-4 py-2 border border-pm-border rounded-lg text-sm font-medium text-pm-muted hover:text-pm-text hover:border-pm-gold transition-colors"
-          >
-            Ver Citas de Hoy
-          </button>
           <a
             id="quick-schedule"
             href="/provider/schedule"
@@ -137,9 +133,9 @@ import MyWeeklySchedule from "../../../components/work-schedule/MyWeeklySchedule
         </div>
       </div>
 
-      <!-- My Schedule (PROVIDER only) -->
-      <div id="my-schedule-section" class="hidden mt-8 bg-pm-surface border border-pm-border rounded-xl p-5">
-        <MyWeeklySchedule client:load />
+      <!-- Day schedule grid -->
+      <div class="mt-8">
+        <DayScheduleGrid client:load />
       </div>
 
       <!-- Appointments List -->
@@ -176,7 +172,6 @@ import MyWeeklySchedule from "../../../components/work-schedule/MyWeeklySchedule
         document.getElementById('quick-team')?.classList.remove('hidden');
         document.getElementById('quick-schedule')?.classList.remove('hidden');
       }
-      document.getElementById('my-schedule-section')?.classList.remove('hidden');
       const appointments = await appointmentService.getUserAppointments();
       document.getElementById('total-appointments')!.textContent = appointments.length.toString();
       document.getElementById('pending-appointments')!.textContent = appointments.filter(a => a.status === 'PENDING').length.toString();
@@ -204,9 +199,6 @@ import MyWeeklySchedule from "../../../components/work-schedule/MyWeeklySchedule
     }
   };
 
-  window.viewToday = function() {
-    alert('Las citas de hoy se resaltarán en la lista');
-  };
 
   document.addEventListener('DOMContentLoaded', loadProviderData);
 </script>
