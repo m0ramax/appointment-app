@@ -142,11 +142,12 @@ import { APP_NAME } from "../config/app";
       const user = await authService.getProfile();
       setTimeout(() => {
         const role = user?.role?.toUpperCase();
-        window.location.href = (role === 'PROVIDER' || role === 'OWNER') ? '/provider/dashboard' : '/dashboard';
+        window.location.href = role === 'SUPER_ADMIN' ? '/admin' : (role === 'PROVIDER' || role === 'OWNER') ? '/provider/dashboard' : '/dashboard';
       }, 1000);
     } catch (error) {
       let msg = 'Error al iniciar sesión';
       if (error.response?.status === 401) msg = 'Email o contraseña incorrectos';
+      else if (error.response?.data?.message) msg = error.response.data.message;
       else if (error.response?.data?.detail) msg = error.response.data.detail;
       showError(msg);
     } finally {
@@ -160,7 +161,7 @@ import { APP_NAME } from "../config/app";
         const user = await authService.getProfile();
         if (user) {
           const role = user.role?.toUpperCase();
-          window.location.href = (role === 'PROVIDER' || role === 'OWNER') ? '/provider/dashboard' : '/dashboard';
+          window.location.href = role === 'SUPER_ADMIN' ? '/admin' : (role === 'PROVIDER' || role === 'OWNER') ? '/provider/dashboard' : '/dashboard';
         }
       } catch {}
     }

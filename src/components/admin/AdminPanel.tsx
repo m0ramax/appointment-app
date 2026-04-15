@@ -9,6 +9,51 @@ function StatusBadge({ used, expiresAt }: { used: boolean; expiresAt: string }) 
   return <span className="px-2 py-0.5 text-xs rounded-full bg-green-400/10 text-green-400 border border-green-400/20">Activo</span>;
 }
 
+function SuspendedBadge() {
+  return (
+    <span className="px-2 py-0.5 text-xs rounded-full bg-red-400/10 text-red-400 border border-red-400/20">
+      Suspendido
+    </span>
+  );
+}
+
+interface ModalState {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  variant: "danger" | "warning";
+  onConfirm: () => void;
+}
+
+function ConfirmModal({ modal, onCancel }: { modal: ModalState; onCancel: () => void }) {
+  const btnClass = modal.variant === "danger"
+    ? "bg-red-500 hover:bg-red-600 text-white"
+    : "bg-yellow-500 hover:bg-yellow-600 text-pm-bg";
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-pm-surface border border-pm-border rounded-xl p-6 w-full max-w-sm shadow-xl">
+        <h3 className="text-base font-semibold text-pm-text mb-2">{modal.title}</h3>
+        <p className="text-sm text-pm-muted mb-6">{modal.message}</p>
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 text-sm font-medium border border-pm-border rounded-lg text-pm-muted hover:text-pm-text transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={modal.onConfirm}
+            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${btnClass}`}
+          >
+            {modal.confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPanel() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [invites, setInvites] = useState<InviteToken[]>([]);
@@ -16,8 +61,9 @@ export default function AdminPanel() {
   const [note, setNote] = useState("");
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState<number | null>(null);
-  const [tab, setTab] = useState<"invites" | "businesses">("invites");
+  const [tab, setTab] = useState<"invites" | "businesses">("businesses");
   const [error, setError] = useState("");
+  const [modal, setModal] = useState<ModalState | null>(null);
 
   useEffect(() => { loadAll(); }, []);
 
@@ -26,7 +72,7 @@ export default function AdminPanel() {
       const [s, i, b] = await Promise.all([
         adminService.getStats(),
         adminService.getInvites(),
-        adminService.getBusinesses(),
+        adminService.getAdminBusinesses(),
       ]);
       setStats(s);
       setInvites(i);
@@ -50,14 +96,64 @@ export default function AdminPanel() {
     }
   }
 
-  async function handleRevoke(id: number) {
-    if (!confirm("¿Revocar esta invitación?")) return;
-    try {
-      await adminService.revokeInvite(id);
-      setInvites(prev => prev.map(i => i.id === id ? { ...i, used: true } : i));
-    } catch {
-      setError("Error al revocar invitación");
-    }
+  function handleRevoke(id: number) {
+    setModal({
+      title: "Revocar invitación",
+      message: "El link dejará de funcionar inmediatamente.",
+      confirmLabel: "Revocar",
+      variant: "danger",
+      onConfirm: async () => {
+        setModal(null);
+        try {
+          await adminService.revokeInvite(id);
+          setInvites(prev => prev.map(i => i.id === id ? { ...i, used: true } : i));
+        } catch {
+          setError("Error al revocar invitación");
+        }
+      },
+    });
+  }
+
+  function handleToggleSuspend(b: Business) {
+    const suspending = !b.suspended;
+    setModal({
+      title: suspending ? `Suspender "${b.name}"` : `Activar "${b.name}"`,
+      message: suspending
+        ? "Los usuarios del negocio no podrán iniciar sesión ni usar la plataforma."
+        : "El negocio volverá a tener acceso completo a la plataforma.",
+      confirmLabel: suspending ? "Suspender" : "Activar",
+      variant: suspending ? "danger" : "warning",
+      onConfirm: async () => {
+        setModal(null);
+        try {
+          const updated = suspending
+            ? await adminService.suspendBusiness(b.id)
+            : await adminService.activateBusiness(b.id);
+          setBusinesses(prev => prev.map(x => x.id === updated.id ? updated : x));
+        } catch {
+          setError(`Error al ${suspending ? 'suspender' : 'activar'} el negocio`);
+        }
+      },
+    });
+  }
+
+  function handleDeleteBusiness(b: Business) {
+    setModal({
+      title: `Eliminar "${b.name}"`,
+      message: "Esta acción es permanente y no se puede deshacer. Se eliminarán todos los datos del negocio.",
+      confirmLabel: "Eliminar",
+      variant: "danger",
+      onConfirm: async () => {
+        setModal(null);
+        try {
+          await adminService.deleteBusiness(b.id);
+          setBusinesses(prev => prev.filter(x => x.id !== b.id));
+          setStats(prev => prev ? { ...prev, businesses: prev.businesses - 1 } : prev);
+        } catch {
+          setError('Error al eliminar el negocio');
+        }
+      },
+    });
   }
 
   function copyLink(invite: InviteToken) {
@@ -75,6 +171,8 @@ export default function AdminPanel() {
     }`;
 
   return (
+    <>
+    {modal && <ConfirmModal modal={modal} onCancel={() => setModal(null)} />}
     <div className="space-y-6">
       {error && (
         <div className="bg-red-400/10 border border-red-400/20 text-red-400 px-4 py-3 rounded-lg text-sm">{error}</div>
@@ -82,10 +180,9 @@ export default function AdminPanel() {
 
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           {[
             { label: "Negocios", value: stats.businesses, color: "text-pm-gold" },
-            { label: "Citas totales", value: stats.appointments, color: "text-blue-400" },
             { label: "Invites activos", value: stats.activeInvites, color: "text-green-400" },
           ].map(s => (
             <div key={s.label} className="bg-pm-surface border border-pm-border rounded-xl p-4">
@@ -176,12 +273,36 @@ export default function AdminPanel() {
           ) : (
             <ul className="divide-y divide-pm-border">
               {businesses.map(b => (
-                <li key={b.id} className="px-4 py-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-pm-text">{b.name}</p>
-                    <p className="text-xs text-pm-dim mt-0.5">{b.whatsappNumber}</p>
+                <li key={b.id} className="px-4 py-4 flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm font-semibold text-pm-text">{b.name}</p>
+                      {b.suspended && <SuspendedBadge />}
+                    </div>
+                    <p className="text-xs text-pm-dim">{b.whatsappNumber}</p>
+                    <p className="text-xs text-pm-dim mt-0.5">
+                      {b._count.users} usuarios · {b._count.services} servicios · {b._count.appointments} citas
+                    </p>
                   </div>
-                  <span className="text-xs text-pm-dim">ID #{b.id}</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-xs text-pm-dim mr-1">ID #{b.id}</span>
+                    <button
+                      onClick={() => handleToggleSuspend(b)}
+                      className={`px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors ${
+                        b.suspended
+                          ? 'border-green-400/30 text-green-400 hover:bg-green-400/10'
+                          : 'border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10'
+                      }`}
+                    >
+                      {b.suspended ? 'Activar' : 'Suspender'}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteBusiness(b)}
+                      className="px-3 py-1.5 text-xs font-medium border border-red-400/30 rounded-lg text-red-400 hover:bg-red-400/10 transition-colors"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -189,5 +310,6 @@ export default function AdminPanel() {
         </div>
       )}
     </div>
+    </>
   );
 }
