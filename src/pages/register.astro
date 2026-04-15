@@ -29,52 +29,91 @@ import { APP_NAME } from "../config/app";
 
       <!-- Success Message -->
       <div id="success-message" class="hidden bg-green-500/10 border border-green-500/30 text-green-400 px-4 py-3 rounded-lg" role="alert">
-        <span class="block sm:inline">¡Cuenta creada exitosamente! Redirigiendo...</span>
+        <span class="block sm:inline">¡Negocio creado exitosamente! Redirigiendo...</span>
       </div>
 
-      <form id="register-form" class="mt-8 space-y-4">
-        <div>
-          <label for="email" class="block text-sm font-medium text-pm-muted mb-1">Email</label>
-          <input
-            id="email" name="email" type="email" autocomplete="email" required
-            class="appearance-none block w-full px-4 py-3 border border-pm-border rounded-lg bg-pm-elevated text-pm-text placeholder-pm-dim focus:outline-none focus:border-pm-gold focus:ring-1 focus:ring-pm-gold transition-colors"
-            placeholder="correo@ejemplo.com"
-          />
-        </div>
+      <!-- Step 1: Account Form -->
+      <div id="step-account">
+        <p class="text-xs font-medium text-pm-muted uppercase tracking-widest mb-4">Paso 1 de 2 — Tu cuenta</p>
+        <form id="register-form" class="space-y-4">
+          <div>
+            <label for="email" class="block text-sm font-medium text-pm-muted mb-1">Email</label>
+            <input
+              id="email" name="email" type="email" autocomplete="email" required
+              class="appearance-none block w-full px-4 py-3 border border-pm-border rounded-lg bg-pm-elevated text-pm-text placeholder-pm-dim focus:outline-none focus:border-pm-gold focus:ring-1 focus:ring-pm-gold transition-colors"
+              placeholder="correo@ejemplo.com"
+            />
+          </div>
 
-        <div>
-          <label for="password" class="block text-sm font-medium text-pm-muted mb-1">Contraseña</label>
-          <input
-            id="password" name="password" type="password" autocomplete="new-password" required minlength="8"
-            class="appearance-none block w-full px-4 py-3 border border-pm-border rounded-lg bg-pm-elevated text-pm-text placeholder-pm-dim focus:outline-none focus:border-pm-gold focus:ring-1 focus:ring-pm-gold transition-colors"
-            placeholder="Mínimo 8 caracteres"
-          />
-        </div>
+          <div>
+            <label for="password" class="block text-sm font-medium text-pm-muted mb-1">Contraseña</label>
+            <input
+              id="password" name="password" type="password" autocomplete="new-password" required minlength="8"
+              class="appearance-none block w-full px-4 py-3 border border-pm-border rounded-lg bg-pm-elevated text-pm-text placeholder-pm-dim focus:outline-none focus:border-pm-gold focus:ring-1 focus:ring-pm-gold transition-colors"
+              placeholder="Mínimo 8 caracteres"
+            />
+          </div>
 
-        <div>
-          <label for="confirm-password" class="block text-sm font-medium text-pm-muted mb-1">Confirmar Contraseña</label>
-          <input
-            id="confirm-password" name="confirm-password" type="password" autocomplete="new-password" required
-            class="appearance-none block w-full px-4 py-3 border border-pm-border rounded-lg bg-pm-elevated text-pm-text placeholder-pm-dim focus:outline-none focus:border-pm-gold focus:ring-1 focus:ring-pm-gold transition-colors"
-            placeholder="Repite la contraseña"
-          />
-        </div>
+          <div>
+            <label for="confirm-password" class="block text-sm font-medium text-pm-muted mb-1">Confirmar Contraseña</label>
+            <input
+              id="confirm-password" name="confirm-password" type="password" autocomplete="new-password" required
+              class="appearance-none block w-full px-4 py-3 border border-pm-border rounded-lg bg-pm-elevated text-pm-text placeholder-pm-dim focus:outline-none focus:border-pm-gold focus:ring-1 focus:ring-pm-gold transition-colors"
+              placeholder="Repite la contraseña"
+            />
+          </div>
 
-        <div class="pt-2">
-          <button
-            type="submit" id="register-button" disabled
-            class="w-full flex justify-center py-3 px-4 rounded-lg text-sm font-semibold text-pm-bg bg-pm-gold hover:bg-pm-gold-light focus:outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span id="register-text">Crear Cuenta</span>
-          </button>
-        </div>
+          <div class="pt-2">
+            <button
+              type="submit" id="register-button" disabled
+              class="w-full flex justify-center py-3 px-4 rounded-lg text-sm font-semibold text-pm-bg bg-pm-gold hover:bg-pm-gold-light focus:outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span id="register-text">Continuar</span>
+            </button>
+          </div>
 
-        <div class="text-center">
-          <a href="/login" class="text-sm text-pm-muted hover:text-pm-gold transition-colors underline underline-offset-2">
-            ¿Ya tienes cuenta? Iniciar sesión
-          </a>
-        </div>
-      </form>
+          <div class="text-center">
+            <a href="/login" class="text-sm text-pm-muted hover:text-pm-gold transition-colors underline underline-offset-2">
+              ¿Ya tienes cuenta? Iniciar sesión
+            </a>
+          </div>
+        </form>
+      </div>
+
+      <!-- Step 2: Business Form (hidden by default) -->
+      <div id="step-business" class="hidden">
+        <p class="text-xs font-medium text-pm-muted uppercase tracking-widest mb-4">Paso 2 de 2 — Tu negocio</p>
+        <div class="border-t border-pm-border mb-6"></div>
+        <h2 class="text-lg font-semibold text-pm-text mb-4">Configura tu negocio</h2>
+        <form id="business-form" class="space-y-4">
+          <div>
+            <label for="business-name" class="block text-sm font-medium text-pm-muted mb-1">Nombre del negocio</label>
+            <input
+              id="business-name" name="name" type="text" required
+              class="appearance-none block w-full px-4 py-3 border border-pm-border rounded-lg bg-pm-elevated text-pm-text placeholder-pm-dim focus:outline-none focus:border-pm-gold focus:ring-1 focus:ring-pm-gold transition-colors"
+              placeholder="Ej. Salón de Belleza Ana"
+            />
+          </div>
+
+          <div>
+            <label for="whatsapp-number" class="block text-sm font-medium text-pm-muted mb-1">Número de WhatsApp</label>
+            <input
+              id="whatsapp-number" name="whatsappNumber" type="text" required
+              class="appearance-none block w-full px-4 py-3 border border-pm-border rounded-lg bg-pm-elevated text-pm-text placeholder-pm-dim focus:outline-none focus:border-pm-gold focus:ring-1 focus:ring-pm-gold transition-colors"
+              placeholder="+1234567890"
+            />
+          </div>
+
+          <div class="pt-2">
+            <button
+              type="submit" id="business-button"
+              class="w-full flex justify-center py-3 px-4 rounded-lg text-sm font-semibold text-pm-bg bg-pm-gold hover:bg-pm-gold-light focus:outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span id="business-text">Crear Negocio</span>
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </main>
 </Layout>
@@ -83,6 +122,8 @@ import { APP_NAME } from "../config/app";
   import { authService, apiClient } from "../lib/api/auth.ts";
 
   let inviteToken: string | null = null;
+  let savedEmail = '';
+  let savedPassword = '';
 
   function showError(message: string) {
     const errorDiv = document.getElementById('error-message')!;
@@ -92,16 +133,27 @@ import { APP_NAME } from "../config/app";
     document.getElementById('success-message')!.classList.add('hidden');
   }
 
+  function clearError() {
+    document.getElementById('error-message')!.classList.add('hidden');
+  }
+
   function showSuccess() {
     document.getElementById('error-message')!.classList.add('hidden');
     document.getElementById('success-message')!.classList.remove('hidden');
   }
 
-  function setLoading(loading: boolean) {
+  function setAccountLoading(loading: boolean) {
     const button = document.getElementById('register-button') as HTMLButtonElement;
     const text = document.getElementById('register-text')!;
     button.disabled = loading || !inviteToken;
-    text.textContent = loading ? 'Creando cuenta...' : 'Crear Cuenta';
+    text.textContent = loading ? 'Creando cuenta...' : 'Continuar';
+  }
+
+  function setBusinessLoading(loading: boolean) {
+    const button = document.getElementById('business-button') as HTMLButtonElement;
+    const text = document.getElementById('business-text')!;
+    button.disabled = loading;
+    text.textContent = loading ? 'Creando negocio...' : 'Crear Negocio';
   }
 
   async function validateToken(token: string) {
@@ -115,6 +167,7 @@ import { APP_NAME } from "../config/app";
     }
   }
 
+  // Step 1: Account creation
   document.getElementById('register-form')!.addEventListener('submit', async function(e) {
     e.preventDefault();
     if (!inviteToken) { showError('Se requiere una invitación válida para registrarse'); return; }
@@ -124,20 +177,50 @@ import { APP_NAME } from "../config/app";
     if (!email || !password) { showError('Por favor completa todos los campos'); return; }
     if (password !== confirm) { showError('Las contraseñas no coinciden'); return; }
     if (password.length < 8) { showError('La contraseña debe tener al menos 8 caracteres'); return; }
-    setLoading(true);
-    document.getElementById('error-message')!.classList.add('hidden');
+    setAccountLoading(true);
+    clearError();
     try {
       await authService.registerOwner({ email, password }, inviteToken);
-      showSuccess();
-      await authService.login({ email, password });
-      setTimeout(() => { window.location.href = '/provider/dashboard'; }, 1500);
+      // Save credentials for the re-login after business creation
+      savedEmail = email;
+      savedPassword = password;
+      // Transition to step 2
+      document.getElementById('step-account')!.classList.add('hidden');
+      document.getElementById('valid-token-banner')!.classList.add('hidden');
+      clearError();
+      document.getElementById('step-business')!.classList.remove('hidden');
     } catch (error: any) {
       let msg = 'Error al crear la cuenta';
       if (error.response?.status === 409) msg = 'Este email ya está registrado';
       else if (error.response?.data?.message) msg = Array.isArray(error.response.data.message) ? error.response.data.message.join(', ') : error.response.data.message;
       showError(msg);
     } finally {
-      setLoading(false);
+      setAccountLoading(false);
+    }
+  });
+
+  // Step 2: Business creation
+  document.getElementById('business-form')!.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (!inviteToken) { showError('Token de invitación perdido. Por favor recarga la página e intenta de nuevo.'); return; }
+    const name = (document.getElementById('business-name') as HTMLInputElement).value.trim();
+    const whatsappNumber = (document.getElementById('whatsapp-number') as HTMLInputElement).value.trim();
+    if (!name || !whatsappNumber) { showError('Por favor completa todos los campos'); return; }
+    setBusinessLoading(true);
+    clearError();
+    try {
+      // JWT from step 1 is already in localStorage and will be sent automatically by apiClient interceptor
+      await apiClient.post(`/business?token=${inviteToken}`, { name, whatsappNumber });
+      // Re-login to get a fresh JWT that includes the new businessId
+      await authService.login({ email: savedEmail, password: savedPassword });
+      showSuccess();
+      setTimeout(() => { window.location.href = '/provider/dashboard'; }, 1500);
+    } catch (error: any) {
+      let msg = 'Error al crear el negocio';
+      if (error.response?.data?.message) msg = Array.isArray(error.response.data.message) ? error.response.data.message.join(', ') : error.response.data.message;
+      showError(msg);
+    } finally {
+      setBusinessLoading(false);
     }
   });
 
