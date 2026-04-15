@@ -11,9 +11,14 @@ const START_HOUR = 7;
 const END_HOUR   = 21;
 const HOUR_PX    = 64;
 
-// Status is communicated via border style + opacity modifier
+// PENDING gets bright yellow in owner view — unmistakably different from any provider color
+const PENDING_STYLE = {
+  bg: "bg-yellow-300/40", border: "border-yellow-400 border-dashed",
+  text: "text-yellow-900 dark:text-yellow-100", label: "text-yellow-700 dark:text-yellow-300",
+};
+
+// Status modifier for non-pending states
 const STATUS_MODIFIER: Record<string, string> = {
-  PENDING:   "border-dashed opacity-75",
   CONFIRMED: "",
   COMPLETED: "opacity-50",
   CANCELLED: "opacity-30",
@@ -58,6 +63,60 @@ function personName(email?: string, fallback?: string) {
 function formatTime(dt: string) {
   const d = new Date(dt);
   return `${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
+}
+
+// ── Popup helpers ─────────────────────────────────────────────────────────────
+
+function statusLabel(status: string) {
+  switch (status) {
+    case "PENDING":   return "Pendiente";
+    case "CONFIRMED": return "Confirmada";
+    case "COMPLETED": return "Completada";
+    case "CANCELLED": return "Cancelada";
+    default:          return status;
+  }
+}
+
+function statusBadgeClass(status: string) {
+  switch (status) {
+    case "PENDING":   return "bg-yellow-400/20 text-yellow-700 dark:text-yellow-300";
+    case "CONFIRMED": return "bg-blue-400/20 text-blue-700 dark:text-blue-300";
+    case "COMPLETED": return "bg-green-400/20 text-green-700 dark:text-green-300";
+    case "CANCELLED": return "bg-pm-border/30 text-pm-muted";
+    default:          return "bg-pm-border/30 text-pm-muted";
+  }
+}
+
+function ActionIcon({ actionKey }: { actionKey: string }) {
+  if (actionKey === "confirm") {
+    return (
+      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    );
+  }
+  if (actionKey === "complete") {
+    return (
+      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+    );
+  }
+  if (actionKey === "cancel") {
+    return (
+      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    );
+  }
+  if (actionKey === "delete") {
+    return (
+      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+    );
+  }
+  return null;
 }
 
 // ── ScheduleTable ─────────────────────────────────────────────────────────────
@@ -139,13 +198,17 @@ interface WeekCalendarProps {
   weekOffset: number;
   setWeekOffset: (fn: (n: number) => number) => void;
   appointments: AppointmentWithParties[];
+  allAppointments: AppointmentWithParties[];
   isOwner: boolean;
+  role: string;
   team: TeamMember[];
+  pendingOutsideWeek: number;
+  onRefresh: () => void;
 }
 
 function WeekCalendar({
   weekDays, weekStart, weekEnd, weekOffset, setWeekOffset,
-  appointments, isOwner, team,
+  appointments, allAppointments, isOwner, role, team, pendingOutsideWeek, onRefresh,
 }: WeekCalendarProps) {
   const today    = (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })();
   const todayStr = toLocalDateStr(today);
@@ -156,11 +219,78 @@ function WeekCalendar({
   const now    = new Date();
   const nowTop = ((now.getHours() - START_HOUR) + now.getMinutes() / 60) * HOUR_PX;
 
+  const [popup, setPopup] = useState<{
+    appt: AppointmentWithParties;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [popupError, setPopupError] = useState<string>("");
+
+  // Close popup when user scrolls anywhere
+  useEffect(() => {
+    if (!popup) return;
+    const close = () => setPopup(null);
+    window.addEventListener("scroll", close, true);
+    return () => window.removeEventListener("scroll", close, true);
+  }, [!!popup]);
+
+  async function handleAction(action: "confirm" | "complete" | "cancel" | "delete") {
+    if (!popup || actionLoading) return;
+    setActionLoading(true);
+    setPopupError("");
+    try {
+      const id = popup.appt.id;
+      if (action === "confirm")  await appointmentService.confirmAppointment(id);
+      if (action === "complete") await appointmentService.completeAppointment(id);
+      if (action === "cancel")   await appointmentService.cancelAppointment(id);
+      if (action === "delete")   await appointmentService.deleteAppointment(id);
+      setPopup(null);
+      onRefresh();
+      window.dispatchEvent(new CustomEvent("appointment-updated"));
+    } catch (e: any) {
+      setPopupError(e?.response?.data?.message || "Error al procesar la acción");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  function getActions(appt: AppointmentWithParties): Array<{
+    key: "confirm" | "complete" | "cancel" | "delete";
+    label: string;
+    danger?: boolean;
+  }> {
+    const isPast = new Date(appt.dateTime) < new Date();
+    const { status } = appt;
+    const actions: Array<{ key: "confirm" | "complete" | "cancel" | "delete"; label: string; danger?: boolean }> = [];
+
+    if (isOwner) {
+      if (status === "PENDING")   actions.push({ key: "confirm",  label: "Confirmar" });
+      if (status === "CONFIRMED") actions.push({ key: "complete", label: "Completar" });
+      if (status !== "COMPLETED" && status !== "CANCELLED")
+        actions.push({ key: "cancel", label: "Cancelar", danger: true });
+      actions.push({ key: "delete", label: "Eliminar", danger: true });
+    } else {
+      // Provider
+      if (status === "PENDING")
+        actions.push({ key: "confirm", label: "Confirmar" });
+      if (status === "CONFIRMED" && isPast)
+        actions.push({ key: "complete", label: "Completar" });
+      if (status === "PENDING" || status === "CONFIRMED")
+        actions.push({ key: "cancel", label: "Cancelar", danger: true });
+    }
+    return actions;
+  }
+
   const providerColorIdx = (providerId: number) => {
     const idx = team.findIndex(m => m.id === providerId);
     return idx >= 0 ? idx : 0;
   };
   const apptStyle = (appt: AppointmentWithParties) => {
+    // PENDING in owner view: amber override so "needs action" is immediately obvious
+    if (isOwner && appt.status === "PENDING") {
+      return { color: PENDING_STYLE, modifier: "" };
+    }
     const color    = PROVIDER_COLORS[providerColorIdx(appt.providerId) % PROVIDER_COLORS.length];
     const modifier = STATUS_MODIFIER[appt.status] ?? "";
     return { color, modifier };
@@ -177,7 +307,35 @@ function WeekCalendar({
     <div className="space-y-2">
       {/* Navigation */}
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-pm-text">Citas</h4>
+        <div className="flex items-center gap-2">
+          <h4 className="text-sm font-semibold text-pm-text">Citas</h4>
+          {pendingOutsideWeek > 0 && (
+            <button
+              onClick={() => {
+                const weekStartStr = toLocalDateStr(weekStart);
+                const weekEndStr   = toLocalDateStr(weekEnd);
+                const nearest = allAppointments
+                  .filter(a => {
+                    if (a.status !== "PENDING") return false;
+                    const ds = toLocalDateStr(new Date(a.dateTime));
+                    return ds < weekStartStr || ds > weekEndStr;
+                  })
+                  .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime())[0];
+                if (!nearest) return;
+                const targetMonday = getMondayOfWeek(new Date(nearest.dateTime));
+                const currentMonday = getMondayOfWeek(today);
+                const diffDays = Math.round((targetMonday.getTime() - currentMonday.getTime()) / 86400000);
+                setWeekOffset(() => Math.round(diffDays / 7));
+              }}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-700 dark:text-amber-300 text-xs font-medium hover:bg-amber-500/30 transition-colors cursor-pointer"
+            >
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 6v6l3 3"/>
+              </svg>
+              {pendingOutsideWeek} pendiente{pendingOutsideWeek > 1 ? "s" : ""} fuera de esta semana
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setWeekOffset(w => w - 1)}
@@ -206,47 +364,51 @@ function WeekCalendar({
         </div>
       </div>
 
-      {/* Grid */}
+      {/* Grid — single scroll container so header and columns share the same width */}
       <div className="bg-pm-surface border border-pm-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <div style={{ minWidth: "560px" }}>
 
-            {/* Day headers */}
-            <div className="flex border-b border-pm-border bg-pm-surface sticky top-0 z-30">
-              <div className="w-12 flex-shrink-0" />
-              {weekDays.map(d => {
-                const ds    = toLocalDateStr(d);
-                const isT   = ds === todayStr;
-                const count = appointments.filter(a =>
-                  a.status !== "CANCELLED" &&
-                  toLocalDateStr(new Date(a.dateTime)) === ds
-                ).length;
-                return (
-                  <div
-                    key={ds}
-                    className={`flex-1 py-2 text-center border-l border-pm-border/40 ${isT ? "bg-pm-gold/5" : ""}`}
-                  >
-                    <p className={`text-xs font-medium ${isT ? "text-pm-gold" : "text-pm-muted"}`}>
-                      {DAY_SHORT[d.getDay()]}
-                    </p>
-                    <div className={`mx-auto mt-0.5 w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold
-                      ${isT ? "bg-pm-gold text-pm-bg" : "text-pm-text"}`}>
-                      {d.getDate()}
-                    </div>
-                    {count > 0 && (
-                      <div className="mt-1 text-[10px] font-medium text-pm-muted leading-none">
-                        {count} {count === 1 ? "cita" : "citas"}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            {/* ONE scrollable container: header is sticky inside it, so both header
+                and grid columns account for the same scrollbar width → no misalignment */}
+            <div className="overflow-y-auto" style={{ maxHeight: "580px" }}>
 
-            {/* Time + event grid */}
-            <div className="flex overflow-y-auto" style={{ maxHeight: "520px" }}>
+              {/* Sticky header row */}
+              <div className="flex border-b border-pm-border bg-pm-surface sticky top-0 z-30">
+                <div className="w-12 flex-shrink-0" />
+                {weekDays.map(d => {
+                  const ds    = toLocalDateStr(d);
+                  const isT   = ds === todayStr;
+                  const count = appointments.filter(a =>
+                    a.status !== "CANCELLED" &&
+                    toLocalDateStr(new Date(a.dateTime)) === ds
+                  ).length;
+                  return (
+                    <div
+                      key={ds}
+                      className={`flex-1 py-2 text-center border-l border-pm-border/40 ${isT ? "bg-pm-gold/5" : ""}`}
+                    >
+                      <p className={`text-xs font-medium ${isT ? "text-pm-gold" : "text-pm-muted"}`}>
+                        {DAY_SHORT[d.getDay()]}
+                      </p>
+                      <div className={`mx-auto mt-0.5 w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold
+                        ${isT ? "bg-pm-gold text-pm-bg" : "text-pm-text"}`}>
+                        {d.getDate()}
+                      </div>
+                      {count > 0 && (
+                        <div className="mt-1 text-[10px] font-medium text-pm-muted leading-none">
+                          {count} {count === 1 ? "cita" : "citas"}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Grid content row: time labels + day columns */}
+              <div className="flex" style={{ height: gridHeight }}>
               {/* Hour labels */}
-              <div className="w-12 flex-shrink-0 relative bg-pm-surface" style={{ height: gridHeight }}>
+              <div className="w-12 flex-shrink-0 relative bg-pm-surface z-10" style={{ height: gridHeight }}>
                 {hours.map(h => (
                   <div
                     key={h}
@@ -258,7 +420,20 @@ function WeekCalendar({
                 ))}
               </div>
 
-              {/* Day columns */}
+              {/* Day columns wrapper — grid lines live here as a single overlay */}
+              <div className="flex-1 relative" style={{ height: gridHeight }}>
+                {/* Hour lines overlay — spans all columns, perfectly aligned */}
+                <div className="absolute inset-0 pointer-events-none">
+                  {hours.map(h => (
+                    <div key={h} className="absolute w-full border-t border-pm-border/25" style={{ top: (h - START_HOUR) * HOUR_PX }} />
+                  ))}
+                  {hours.map(h => (
+                    <div key={`${h}h`} className="absolute w-full border-t border-pm-border/10" style={{ top: (h - START_HOUR) * HOUR_PX + HOUR_PX / 2 }} />
+                  ))}
+                </div>
+
+                {/* Day columns */}
+                <div className="flex h-full">
               {weekDays.map(d => {
                 const ds       = toLocalDateStr(d);
                 const isT      = ds === todayStr;
@@ -270,12 +445,6 @@ function WeekCalendar({
                     className={`flex-1 border-l border-pm-border/40 relative ${isT ? "bg-pm-gold/[0.03]" : ""}`}
                     style={{ height: gridHeight }}
                   >
-                    {hours.map(h => (
-                      <div key={h} className="absolute w-full border-t border-pm-border/25" style={{ top: (h - START_HOUR) * HOUR_PX }} />
-                    ))}
-                    {hours.map(h => (
-                      <div key={`${h}h`} className="absolute w-full border-t border-pm-border/10" style={{ top: (h - START_HOUR) * HOUR_PX + HOUR_PX / 2 }} />
-                    ))}
 
                     {/* Now indicator */}
                     {isT && nowTop >= 0 && nowTop <= gridHeight && (
@@ -299,10 +468,13 @@ function WeekCalendar({
                         const col    = colOf.get(appt.id) ?? 0;
                         const total  = totalOf.get(appt.id) ?? 1;
                         const pct    = 100 / total;
+                        const hasActions = getActions(appt).length > 0;
                         return (
                           <div
                             key={appt.id}
-                            className={`absolute rounded border px-1.5 py-1 z-20 overflow-hidden cursor-default ${color.bg} ${color.border} ${modifier}`}
+                            className={`absolute rounded border px-1.5 py-1 z-20 overflow-hidden
+                              ${hasActions ? "cursor-pointer" : "cursor-default"}
+                              ${color.bg} ${color.border} ${modifier}`}
                             style={{
                               top:    top + 1,
                               height: height - 2,
@@ -310,9 +482,22 @@ function WeekCalendar({
                               width:  `calc(${pct}% - 4px)`,
                             }}
                             title={`${label} · ${appt.title} · ${appt.durationMinutes}min`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const actions = getActions(appt);
+                              if (actions.length === 0) return;
+                              setPopup({ appt, x: e.clientX, y: e.clientY });
+                            }}
                           >
-                            <p className={`text-xs font-semibold leading-tight truncate ${color.text}`}>
-                              {formatTime(appt.dateTime)} · {label}
+                            <p className={`text-xs font-semibold leading-tight truncate flex items-center gap-1 ${color.text}`}>
+                              {isOwner && (
+                                <span className="flex-shrink-0 opacity-90" title={appt.status}>
+                                  {appt.status === "PENDING"   && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 6v6l3 3"/></svg>}
+                                  {appt.status === "CONFIRMED" && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}
+                                  {appt.status === "COMPLETED" && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>}
+                                </span>
+                              )}
+                              <span className="truncate">{formatTime(appt.dateTime)} · {label}</span>
                             </p>
                             {height >= 38 && (
                               <p className={`text-xs opacity-80 truncate ${color.text}`}>{sub}</p>
@@ -324,10 +509,13 @@ function WeekCalendar({
                   </div>
                 );
               })}
-            </div>
-          </div>
-        </div>
-      </div>
+                </div>{/* flex h-full day columns */}
+              </div>{/* flex-1 relative wrapper */}
+              </div>{/* flex grid content row */}
+            </div>{/* overflow-y-auto */}
+          </div>{/* minWidth */}
+        </div>{/* overflow-x-auto */}
+      </div>{/* rounded-xl */}
 
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-pm-dim">
         <span className="flex items-center gap-1.5">
@@ -353,6 +541,59 @@ function WeekCalendar({
           <span className="w-3 h-3 rounded-sm border border-pm-muted/60" /> Completada
         </span>
       </div>
+
+      {/* Popup */}
+      {popup && (
+        <>
+          {/* Backdrop */}
+          <div className="fixed inset-0 z-[60]" onClick={() => setPopup(null)} />
+          {/* Menu */}
+          <div
+            className="fixed z-[61] bg-pm-surface border border-pm-border rounded-xl shadow-xl overflow-hidden w-52"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              left: Math.min(popup.x, window.innerWidth - 220),
+              top:  Math.min(popup.y, window.innerHeight - 200),
+            }}
+          >
+            {/* Header */}
+            <div className="px-3 py-2 border-b border-pm-border/60">
+              <p className="text-xs font-semibold text-pm-text truncate">
+                {formatTime(popup.appt.dateTime)} · {personName(popup.appt.client?.email, `Cliente #${popup.appt.clientId}`)}
+              </p>
+              <p className="text-xs text-pm-muted truncate">{popup.appt.title}</p>
+              <span className={`inline-block mt-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${statusBadgeClass(popup.appt.status)}`}>
+                {statusLabel(popup.appt.status)}
+              </span>
+            </div>
+            {/* Actions */}
+            <div className="py-1">
+              {getActions(popup.appt).map(action => (
+                <button
+                  key={action.key}
+                  disabled={actionLoading}
+                  onClick={() => handleAction(action.key)}
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors disabled:opacity-50
+                    ${action.danger ? "text-red-400 hover:bg-red-500/10" : "text-pm-text hover:bg-pm-border/30"}`}
+                >
+                  {actionLoading ? (
+                    <svg className="w-3.5 h-3.5 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                    </svg>
+                  ) : (
+                    <ActionIcon actionKey={action.key} />
+                  )}
+                  {action.label}
+                </button>
+              ))}
+            </div>
+            {popupError && (
+              <p className="px-3 py-2 text-xs text-red-400 border-t border-pm-border/60">{popupError}</p>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -365,6 +606,7 @@ export default function DayScheduleGrid() {
   const [team, setTeam]     = useState<TeamMember[]>([]);
   const [schedules, setSchedules] = useState<Record<number, WorkSchedule[]>>({});
   const [appointments, setAppointments] = useState<AppointmentWithParties[]>([]);
+  const [allAppointments, setAllAppointments] = useState<AppointmentWithParties[]>([]);
   const [loading, setLoading]   = useState(true);
   const [weekOffset, setWeekOffset] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -421,6 +663,10 @@ export default function DayScheduleGrid() {
       appointmentService.getBusinessAppointmentsForWeek(start, end)
         .then(setAppointments)
         .catch(() => {});
+      // Fetch all appointments (wide range) to detect pending outside current week
+      appointmentService.getBusinessAppointmentsForWeek("2020-01-01", "2099-12-31")
+        .then(setAllAppointments)
+        .catch(() => {});
     } else {
       appointmentService.getUserAppointments()
         .then(all => setAppointments(all as AppointmentWithParties[]))
@@ -437,6 +683,16 @@ export default function DayScheduleGrid() {
     </div>
   );
 
+  const weekStartStr = toLocalDateStr(weekStart);
+  const weekEndStr   = toLocalDateStr(weekEnd);
+  const pendingOutsideWeek = isOwner
+    ? allAppointments.filter(a => {
+        if (a.status !== "PENDING") return false;
+        const ds = toLocalDateStr(new Date(a.dateTime));
+        return ds < weekStartStr || ds > weekEndStr;
+      }).length
+    : 0;
+
   return (
     <div className="space-y-6">
       <ScheduleTable team={team} schedules={schedules} userId={userId} />
@@ -447,8 +703,12 @@ export default function DayScheduleGrid() {
         weekOffset={weekOffset}
         setWeekOffset={setWeekOffset}
         appointments={appointments}
+        allAppointments={allAppointments}
         isOwner={isOwner}
+        role={role}
         team={team}
+        pendingOutsideWeek={pendingOutsideWeek}
+        onRefresh={() => setRefreshKey(k => k + 1)}
       />
     </div>
   );

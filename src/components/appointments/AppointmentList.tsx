@@ -33,6 +33,12 @@ export default function AppointmentList() {
 
   useEffect(() => { if (role) loadAppointments(); }, [role]);
 
+  useEffect(() => {
+    const handler = () => loadAppointments();
+    window.addEventListener("appointment-updated", handler);
+    return () => window.removeEventListener("appointment-updated", handler);
+  }, [role]);
+
   const loadAppointments = async () => {
     setLoading(true);
     setError("");
@@ -77,6 +83,17 @@ export default function AppointmentList() {
       window.dispatchEvent(new CustomEvent("appointment-updated"));
     } catch (err: any) {
       setError(err.response?.data?.message || "Error al cancelar la cita");
+    }
+  };
+
+  const handleDelete = async (appointmentId: number) => {
+    if (!confirm("¿Eliminar esta cita permanentemente?")) return;
+    try {
+      await appointmentService.deleteAppointment(appointmentId);
+      await loadAppointments();
+      window.dispatchEvent(new CustomEvent("appointment-updated"));
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error al eliminar la cita");
     }
   };
 
@@ -226,7 +243,42 @@ export default function AppointmentList() {
                 </div>
 
                 <div className="flex-shrink-0 flex items-center gap-2">
-                  {isProvider && appointment.status === "PENDING" && (
+                  {isOwner && (
+                    <>
+                      {appointment.status === "PENDING" && (
+                        <button
+                          onClick={() => handleStatusUpdate(appointment.id, "CONFIRMED")}
+                          className="px-3 py-1.5 bg-green-600/80 hover:bg-green-600 text-white text-xs font-medium rounded-lg border border-green-600/30 transition-colors"
+                        >
+                          Confirmar
+                        </button>
+                      )}
+                      {appointment.status === "CONFIRMED" && (
+                        <button
+                          onClick={() => handleStatusUpdate(appointment.id, "COMPLETED")}
+                          className="px-3 py-1.5 bg-blue-600/80 hover:bg-blue-600 text-white text-xs font-medium rounded-lg border border-blue-600/30 transition-colors"
+                        >
+                          Completar
+                        </button>
+                      )}
+                      {(appointment.status === "PENDING" || appointment.status === "CONFIRMED") && (
+                        <button
+                          onClick={() => handleStatusUpdate(appointment.id, "CANCELLED")}
+                          className="px-3 py-1.5 bg-pm-elevated hover:bg-pm-border text-pm-muted text-xs font-medium rounded-lg border border-pm-border transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDelete(appointment.id)}
+                        className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/40 text-red-400 text-xs font-medium rounded-lg border border-red-600/30 transition-colors"
+                      >
+                        Eliminar
+                      </button>
+                    </>
+                  )}
+
+                  {!isOwner && role === "PROVIDER" && appointment.status === "PENDING" && (
                     <>
                       <button
                         onClick={() => handleStatusUpdate(appointment.id, "CONFIRMED")}
@@ -243,7 +295,7 @@ export default function AppointmentList() {
                     </>
                   )}
 
-                  {isProvider && appointment.status === "CONFIRMED" && (
+                  {!isOwner && role === "PROVIDER" && appointment.status === "CONFIRMED" && (
                     <>
                       <button
                         onClick={() => handleStatusUpdate(appointment.id, "COMPLETED")}
@@ -260,7 +312,7 @@ export default function AppointmentList() {
                     </>
                   )}
 
-                  {!isProvider && (appointment.status === "PENDING" || appointment.status === "CONFIRMED") && (
+                  {role === "CLIENT" && (appointment.status === "PENDING" || appointment.status === "CONFIRMED") && (
                     <button
                       onClick={() => handleCancelAppointment(appointment.id)}
                       className="px-3 py-1.5 bg-red-600/70 hover:bg-red-600 text-white text-xs font-medium rounded-lg border border-red-600/30 transition-colors"

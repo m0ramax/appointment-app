@@ -62,8 +62,9 @@ export const authService = {
     return response.data;
   },
 
-  async registerOwner(credentials: RegisterCredentials): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>("/auth/register/owner", credentials);
+  async registerOwner(credentials: RegisterCredentials, token: string): Promise<AuthResponse> {
+    const response = await apiClient.post<AuthResponse>(`/auth/register/owner?token=${token}`, credentials);
+    safeStorage.set("token", response.data.access_token);
     return response.data;
   },
 

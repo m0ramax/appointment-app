@@ -62,14 +62,18 @@ export default function ManualAppointmentModal({ businessId, onClose, onCreated 
     e.preventDefault();
     if (saving) return;
     setError("");
+    const dateTime = new Date(`${form.date}T${form.time}:00`);
+    if (dateTime <= new Date()) {
+      setError("No puedes crear citas en el pasado");
+      return;
+    }
     setSaving(true);
     try {
-      const dateTime = new Date(`${form.date}T${form.time}:00`).toISOString();
       const data: ManualAppointmentCreate = {
         clientEmail: form.clientEmail,
         providerId: +form.providerId,
         title: form.title || "Cita",
-        dateTime,
+        dateTime: dateTime.toISOString(),
         durationMinutes: form.durationMinutes,
         ...(form.serviceId ? { serviceId: +form.serviceId } : {}),
       };
@@ -119,7 +123,7 @@ export default function ManualAppointmentModal({ businessId, onClose, onCreated 
               {team.map(m => (
                 <option key={m.id} value={String(m.id)} className="bg-pm-elevated">
                   {m.email.split("@")[0].charAt(0).toUpperCase() + m.email.split("@")[0].slice(1)}
-                  {m.role === "OWNER" ? " (Propietario)" : " (Proveedor)"}
+                  {m.role === "OWNER" ? " (Admin)" : " (Proveedor)"}
                 </option>
               ))}
             </select>
