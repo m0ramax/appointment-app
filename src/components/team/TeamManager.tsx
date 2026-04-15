@@ -53,7 +53,7 @@ export default function TeamManager() {
 
   const getRoleBadge = (role: string) => {
     if (role === "OWNER") return (
-      <span className="text-xs px-2 py-0.5 rounded-full bg-pm-gold/20 text-pm-gold border border-pm-gold/30">Dueño</span>
+      <span className="text-xs px-2 py-0.5 rounded-full bg-pm-gold/20 text-pm-gold border border-pm-gold/30">Admin</span>
     );
     return (
       <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">Proveedor</span>

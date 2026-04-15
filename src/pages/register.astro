@@ -12,6 +12,16 @@ import { APP_NAME } from "../config/app";
         <p class="mt-2 text-pm-muted text-sm">Crea tu cuenta y reduce los no-shows de tu negocio</p>
       </div>
 
+      <!-- Invalid token banner -->
+      <div id="invalid-token-banner" class="hidden bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm">
+        Esta invitación es inválida, ya fue utilizada o expiró. Solicita un nuevo link al equipo.
+      </div>
+
+      <!-- Valid token banner -->
+      <div id="valid-token-banner" class="hidden bg-green-500/10 border border-green-500/30 text-green-400 px-4 py-3 rounded-lg text-sm">
+        ✓ Invitación válida. Completa tu registro.
+      </div>
+
       <!-- Error Message -->
       <div id="error-message" class="hidden bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg" role="alert">
         <span class="block sm:inline" id="error-text"></span>
@@ -50,20 +60,9 @@ import { APP_NAME } from "../config/app";
           />
         </div>
 
-        <div>
-          <label for="role" class="block text-sm font-medium text-pm-muted mb-1">Tipo de Cuenta</label>
-          <select
-            id="role" name="role" required
-            class="block w-full px-4 py-3 border border-pm-border bg-pm-elevated text-pm-text rounded-lg focus:outline-none focus:border-pm-gold focus:ring-1 focus:ring-pm-gold transition-colors"
-          >
-            <option value="" class="bg-pm-elevated">Selecciona un tipo</option>
-            <option value="owner" class="bg-pm-elevated">Dueño de negocio — Administrar mi negocio</option>
-          </select>
-        </div>
-
         <div class="pt-2">
           <button
-            type="submit" id="register-button"
+            type="submit" id="register-button" disabled
             class="w-full flex justify-center py-3 px-4 rounded-lg text-sm font-semibold text-pm-bg bg-pm-gold hover:bg-pm-gold-light focus:outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span id="register-text">Crear Cuenta</span>
@@ -81,70 +80,69 @@ import { APP_NAME } from "../config/app";
 </Layout>
 
 <script>
-  import { authService } from "../lib/api/auth.ts";
+  import { authService, apiClient } from "../lib/api/auth.ts";
 
-  function showError(message) {
-    const errorDiv = document.getElementById('error-message');
-    const errorText = document.getElementById('error-text');
-    const successDiv = document.getElementById('success-message');
+  let inviteToken: string | null = null;
+
+  function showError(message: string) {
+    const errorDiv = document.getElementById('error-message')!;
+    const errorText = document.getElementById('error-text')!;
     errorText.textContent = message;
     errorDiv.classList.remove('hidden');
-    successDiv.classList.add('hidden');
+    document.getElementById('success-message')!.classList.add('hidden');
   }
 
   function showSuccess() {
-    document.getElementById('error-message').classList.add('hidden');
-    document.getElementById('success-message').classList.remove('hidden');
+    document.getElementById('error-message')!.classList.add('hidden');
+    document.getElementById('success-message')!.classList.remove('hidden');
   }
 
-  function hideMessages() {
-    document.getElementById('error-message').classList.add('hidden');
-    document.getElementById('success-message').classList.add('hidden');
-  }
-
-  function setLoading(loading) {
-    const button = document.getElementById('register-button');
-    const text = document.getElementById('register-text');
-    button.disabled = loading;
+  function setLoading(loading: boolean) {
+    const button = document.getElementById('register-button') as HTMLButtonElement;
+    const text = document.getElementById('register-text')!;
+    button.disabled = loading || !inviteToken;
     text.textContent = loading ? 'Creando cuenta...' : 'Crear Cuenta';
   }
 
-  function validatePasswords() {
-    const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('confirm-password').value;
-    if (password !== confirmPassword) { showError('Las contraseñas no coinciden'); return false; }
-    if (password.length < 8) { showError('La contraseña debe tener al menos 8 caracteres'); return false; }
-    return true;
+  async function validateToken(token: string) {
+    try {
+      await apiClient.get(`/invite/validate/${token}`);
+      inviteToken = token;
+      document.getElementById('valid-token-banner')!.classList.remove('hidden');
+      (document.getElementById('register-button') as HTMLButtonElement).disabled = false;
+    } catch {
+      document.getElementById('invalid-token-banner')!.classList.remove('hidden');
+    }
   }
 
-  document.getElementById('register-form').addEventListener('submit', async function(e) {
+  document.getElementById('register-form')!.addEventListener('submit', async function(e) {
     e.preventDefault();
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const role = document.getElementById('role').value;
-    if (!email || !password || !role) { showError('Por favor completa todos los campos'); return; }
-    if (!validatePasswords()) return;
+    if (!inviteToken) { showError('Se requiere una invitación válida para registrarse'); return; }
+    const email = (document.getElementById('email') as HTMLInputElement).value;
+    const password = (document.getElementById('password') as HTMLInputElement).value;
+    const confirm = (document.getElementById('confirm-password') as HTMLInputElement).value;
+    if (!email || !password) { showError('Por favor completa todos los campos'); return; }
+    if (password !== confirm) { showError('Las contraseñas no coinciden'); return; }
+    if (password.length < 8) { showError('La contraseña debe tener al menos 8 caracteres'); return; }
     setLoading(true);
-    hideMessages();
+    document.getElementById('error-message')!.classList.add('hidden');
     try {
-      await authService.registerOwner({ email, password });
+      await authService.registerOwner({ email, password }, inviteToken);
       showSuccess();
       await authService.login({ email, password });
-      setTimeout(() => {
-        window.location.href = '/provider/dashboard';
-      }, 1500);
-    } catch (error) {
+      setTimeout(() => { window.location.href = '/provider/dashboard'; }, 1500);
+    } catch (error: any) {
       let msg = 'Error al crear la cuenta';
       if (error.response?.status === 409) msg = 'Este email ya está registrado';
-      else if (error.response?.data?.message) msg = error.response.data.message;
+      else if (error.response?.data?.message) msg = Array.isArray(error.response.data.message) ? error.response.data.message.join(', ') : error.response.data.message;
       showError(msg);
     } finally {
       setLoading(false);
     }
   });
 
-  document.getElementById('confirm-password').addEventListener('input', function() {
-    const password = document.getElementById('password').value;
+  document.getElementById('confirm-password')!.addEventListener('input', function(this: HTMLInputElement) {
+    const password = (document.getElementById('password') as HTMLInputElement).value;
     this.setCustomValidity(this.value && password !== this.value ? 'Las contraseñas no coinciden' : '');
   });
 
@@ -152,8 +150,14 @@ import { APP_NAME } from "../config/app";
     if (authService.isAuthenticated()) {
       try {
         const user = await authService.getProfile();
-        if (user) window.location.href = '/provider/dashboard';
+        if (user) { window.location.href = '/provider/dashboard'; return; }
       } catch {}
+    }
+    const token = new URLSearchParams(window.location.search).get('token');
+    if (token) {
+      await validateToken(token);
+    } else {
+      document.getElementById('invalid-token-banner')!.classList.remove('hidden');
     }
   });
 </script>

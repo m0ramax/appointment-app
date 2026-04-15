@@ -65,8 +65,9 @@ import ManualAppointmentTrigger from "../../../components/appointments/ManualApp
 
             <!-- Stats Cards -->
             <div class="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-                <div
-                    class="bg-pm-surface border border-pm-border rounded-xl p-5"
+                <button
+                    onclick="filterAppointments('ALL')"
+                    class="bg-pm-surface border border-pm-border rounded-xl p-5 w-full text-left hover:border-pm-gold transition-colors group cursor-pointer"
                 >
                     <div class="flex items-center justify-between">
                         <div>
@@ -100,10 +101,12 @@ import ManualAppointmentTrigger from "../../../components/appointments/ManualApp
                             </svg>
                         </div>
                     </div>
-                </div>
+                    <span class="text-xs text-pm-muted group-hover:text-pm-gold transition-colors mt-2 block">Ver →</span>
+                </button>
 
-                <div
-                    class="bg-pm-surface border border-pm-border rounded-xl p-5"
+                <button
+                    onclick="filterAppointments('PENDING')"
+                    class="bg-pm-surface border border-pm-border rounded-xl p-5 w-full text-left hover:border-pm-gold transition-colors group cursor-pointer"
                 >
                     <div class="flex items-center justify-between">
                         <div>
@@ -137,10 +140,12 @@ import ManualAppointmentTrigger from "../../../components/appointments/ManualApp
                             </svg>
                         </div>
                     </div>
-                </div>
+                    <span class="text-xs text-pm-muted group-hover:text-pm-gold transition-colors mt-2 block">Ver →</span>
+                </button>
 
-                <div
-                    class="bg-pm-surface border border-pm-border rounded-xl p-5"
+                <button
+                    onclick="filterAppointments('CONFIRMED')"
+                    class="bg-pm-surface border border-pm-border rounded-xl p-5 w-full text-left hover:border-pm-gold transition-colors group cursor-pointer"
                 >
                     <div class="flex items-center justify-between">
                         <div>
@@ -174,10 +179,12 @@ import ManualAppointmentTrigger from "../../../components/appointments/ManualApp
                             </svg>
                         </div>
                     </div>
-                </div>
+                    <span class="text-xs text-pm-muted group-hover:text-pm-gold transition-colors mt-2 block">Ver →</span>
+                </button>
 
-                <div
-                    class="bg-pm-surface border border-pm-border rounded-xl p-5"
+                <button
+                    onclick="filterAppointments('COMPLETED')"
+                    class="bg-pm-surface border border-pm-border rounded-xl p-5 w-full text-left hover:border-pm-gold transition-colors group cursor-pointer"
                 >
                     <div class="flex items-center justify-between">
                         <div>
@@ -210,7 +217,8 @@ import ManualAppointmentTrigger from "../../../components/appointments/ManualApp
                             </svg>
                         </div>
                     </div>
-                </div>
+                    <span class="text-xs text-pm-muted group-hover:text-pm-gold transition-colors mt-2 block">Ver →</span>
+                </button>
             </div>
 
 
@@ -220,7 +228,7 @@ import ManualAppointmentTrigger from "../../../components/appointments/ManualApp
             </div>
 
             <!-- Appointments List -->
-            <div class="mt-8">
+            <div class="mt-8" id="appointments-section">
                 <AppointmentList client:load />
             </div>
         </div>
@@ -230,6 +238,13 @@ import ManualAppointmentTrigger from "../../../components/appointments/ManualApp
 <script>
     import { appointmentService } from "../../../lib/api/appointments.ts";
     import { authService } from "../../../lib/api/auth.ts";
+
+    declare global {
+        interface Window {
+            filterAppointments: (status: string) => void;
+            confirmAllPending: () => Promise<void>;
+        }
+    }
 
     function toDateStr(d: Date) {
         return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
@@ -265,13 +280,13 @@ import ManualAppointmentTrigger from "../../../components/appointments/ManualApp
             const titleEl = document.getElementById("dashboard-title");
             if (titleEl)
                 titleEl.textContent = isOwner
-                    ? "Dashboard del Propietario"
+                    ? "Dashboard del Admin"
                     : "Dashboard del Proveedor";
 
             const providerInfoEl = document.getElementById("provider-info");
             if (providerInfoEl)
                 providerInfoEl.textContent = isOwner
-                    ? `${capitalizedName} · Propietario`
+                    ? `${capitalizedName} · Admin`
                     : `${capitalizedName}`;
 
             if (isOwner) {
@@ -289,16 +304,10 @@ import ManualAppointmentTrigger from "../../../components/appointments/ManualApp
 
             let appointments: { status: string }[];
             if (isOwner) {
-                const today = new Date();
-                const end = new Date(today);
-                end.setDate(end.getDate() + 30);
-                appointments =
-                    await appointmentService.getBusinessAppointmentsForWeek(
-                        toDateStr(today),
-                        toDateStr(end),
-                    );
+                appointments = await appointmentService.getBusinessAppointmentsAll();
             } else {
-                appointments = await appointmentService.getUserAppointments();
+                const all = await appointmentService.getUserAppointments();
+                appointments = all.filter((a) => a.status !== "CANCELLED");
             }
 
             document.getElementById("total-appointments")!.textContent =
@@ -328,14 +337,7 @@ import ManualAppointmentTrigger from "../../../components/appointments/ManualApp
 
             let appointments: { id: number; status: string }[];
             if (isOwner) {
-                const today = new Date();
-                const end = new Date(today);
-                end.setDate(end.getDate() + 30);
-                appointments =
-                    await appointmentService.getBusinessAppointmentsForWeek(
-                        toDateStr(today),
-                        toDateStr(end),
-                    );
+                appointments = await appointmentService.getBusinessAppointmentsAll();
             } else {
                 appointments = await appointmentService.getUserAppointments();
             }
@@ -360,5 +362,15 @@ import ManualAppointmentTrigger from "../../../components/appointments/ManualApp
         }
     };
 
+    window.filterAppointments = function (status: string) {
+        window.dispatchEvent(
+            new CustomEvent("filter-appointments", { detail: { status } }),
+        );
+        document
+            .getElementById("appointments-section")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+
     document.addEventListener("DOMContentLoaded", loadProviderData);
+    window.addEventListener("appointment-updated", loadProviderData);
 </script>

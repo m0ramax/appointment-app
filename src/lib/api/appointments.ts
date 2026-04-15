@@ -115,4 +115,9 @@ export const appointmentService = {
     );
     return response.data;
   },
+
+  async getBusinessAppointmentsAll(): Promise<AppointmentWithParties[]> {
+    const response = await apiClient.get<AppointmentWithParties[]>("/appointments/business?all=true");
+    return response.data;
+  },
 };
