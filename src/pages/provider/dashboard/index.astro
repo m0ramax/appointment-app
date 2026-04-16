@@ -290,15 +290,15 @@ import ManualAppointmentTrigger from "../../../components/appointments/ManualApp
                     : `${capitalizedName}`;
 
             if (isOwner) {
-                // Only show team management buttons when teamMode is enabled on the business
-                let teamMode = true; // default to visible while loading
+                // Show team button only when teamMode is enabled on the business
+                let teamMode = false;
                 try {
-                    const bizRes = await apiClient.get<{ teamMode?: boolean }[]>("/business");
-                    if (bizRes.data && bizRes.data.length > 0) {
-                        teamMode = bizRes.data[0].teamMode !== false;
+                    if (user.businessId) {
+                        const bizRes = await apiClient.get<{ teamMode?: boolean }>(`/business/${user.businessId}`);
+                        teamMode = bizRes.data.teamMode === true;
                     }
                 } catch {
-                    // If the request fails, default to showing team buttons
+                    // If the request fails, keep team hidden
                 }
 
                 if (teamMode) {
@@ -356,22 +356,16 @@ import ManualAppointmentTrigger from "../../../components/appointments/ManualApp
             }
 
             const pending = appointments.filter((a) => a.status === "PENDING");
-            if (pending.length === 0) {
-                alert("No hay citas pendientes para confirmar");
-                return;
-            }
-            if (!confirm(`¿Confirmar ${pending.length} citas pendientes?`))
-                return;
+            if (pending.length === 0) return;
+
             for (const appointment of pending) {
                 await appointmentService.updateAppointment(appointment.id, {
                     status: "CONFIRMED",
                 });
             }
-            alert(`${pending.length} citas confirmadas exitosamente`);
             location.reload();
         } catch (error) {
             console.error("Error confirming appointments:", error);
-            alert("Error al confirmar las citas");
         }
     };
 

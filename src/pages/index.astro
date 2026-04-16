@@ -25,6 +25,7 @@ import Layout from "../layouts/Layout.astro";
               </p>
               <div class="mt-8 flex flex-wrap gap-4">
                 <a
+                  id="btn-register"
                   href="/register"
                   class="inline-flex items-center px-6 py-3 text-sm font-semibold rounded-lg text-pm-bg bg-pm-gold hover:bg-pm-gold-light transition-colors"
                 >
@@ -418,5 +419,16 @@ import Layout from "../layouts/Layout.astro";
   }
 
   document.addEventListener('DOMContentLoaded', initSlider);
+
+  // Hide register button if registration is disabled
+  const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+  fetch(`${API_URL}/platform-settings`)
+    .then(r => r.json())
+    .then((data: { registrationEnabled: boolean }) => {
+      if (!data.registrationEnabled) {
+        document.getElementById('btn-register')?.remove();
+      }
+    })
+    .catch(() => {});
 </script>
 </Layout>

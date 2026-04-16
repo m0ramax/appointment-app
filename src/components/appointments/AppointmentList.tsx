@@ -5,6 +5,7 @@ import { appointmentService, type AppointmentWithParties } from "../../lib/api/a
 import { authService } from "../../lib/api/auth";
 import { workScheduleService, type TeamMember } from "../../lib/api/work-schedule";
 import { PROVIDER_COLORS } from "../../lib/providerColors";
+import ConfirmModal, { type ConfirmModalState } from "../ui/ConfirmModal";
 
 function toDateStr(d: Date) {
   return `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2,"0")}-${d.getDate().toString().padStart(2,"0")}`;
@@ -16,6 +17,7 @@ export default function AppointmentList() {
   const [appointments, setAppointments] = useState<AppointmentWithParties[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+  const [modal, setModal] = useState<ConfirmModalState | null>(null);
 
   useEffect(() => {
     authService.getProfile()
@@ -75,26 +77,42 @@ export default function AppointmentList() {
     }
   };
 
-  const handleCancelAppointment = async (appointmentId: number) => {
-    if (!confirm("¿Estás seguro de que quieres cancelar esta cita?")) return;
-    try {
-      await appointmentService.cancelAppointment(appointmentId);
-      await loadAppointments();
-      window.dispatchEvent(new CustomEvent("appointment-updated"));
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Error al cancelar la cita");
-    }
+  const handleCancelAppointment = (appointmentId: number) => {
+    setModal({
+      title: "Cancelar cita",
+      message: "¿Estás seguro de que quieres cancelar esta cita?",
+      confirmLabel: "Cancelar cita",
+      variant: "warning",
+      onConfirm: async () => {
+        setModal(null);
+        try {
+          await appointmentService.cancelAppointment(appointmentId);
+          await loadAppointments();
+          window.dispatchEvent(new CustomEvent("appointment-updated"));
+        } catch (err: any) {
+          setError(err.response?.data?.message || "Error al cancelar la cita");
+        }
+      },
+    });
   };
 
-  const handleDelete = async (appointmentId: number) => {
-    if (!confirm("¿Eliminar esta cita permanentemente?")) return;
-    try {
-      await appointmentService.deleteAppointment(appointmentId);
-      await loadAppointments();
-      window.dispatchEvent(new CustomEvent("appointment-updated"));
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Error al eliminar la cita");
-    }
+  const handleDelete = (appointmentId: number) => {
+    setModal({
+      title: "Eliminar cita",
+      message: "Esta acción es permanente y no se puede deshacer.",
+      confirmLabel: "Eliminar",
+      variant: "danger",
+      onConfirm: async () => {
+        setModal(null);
+        try {
+          await appointmentService.deleteAppointment(appointmentId);
+          await loadAppointments();
+          window.dispatchEvent(new CustomEvent("appointment-updated"));
+        } catch (err: any) {
+          setError(err.response?.data?.message || "Error al eliminar la cita");
+        }
+      },
+    });
   };
 
   const isOwner    = role === "OWNER";
@@ -176,6 +194,8 @@ export default function AppointmentList() {
   }
 
   return (
+    <>
+    {modal && <ConfirmModal modal={modal} onCancel={() => setModal(null)} />}
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-base font-semibold text-pm-text">
@@ -327,5 +347,6 @@ export default function AppointmentList() {
         </ul>
       </div>
     </div>
+    </>
   );
 }

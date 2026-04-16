@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { adminService, platformSettingsService, type InviteToken, type Business, type AdminStats, type PlatformSettings } from "../../lib/api/admin";
+import ConfirmModal, { type ConfirmModalState } from "../ui/ConfirmModal";
 
 const BASE_URL = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -29,42 +30,6 @@ function TeamModeBadge({ teamMode }: { teamMode: boolean }) {
   );
 }
 
-interface ModalState {
-  title: string;
-  message: string;
-  confirmLabel: string;
-  variant: "danger" | "warning";
-  onConfirm: () => void;
-}
-
-function ConfirmModal({ modal, onCancel }: { modal: ModalState; onCancel: () => void }) {
-  const btnClass = modal.variant === "danger"
-    ? "bg-red-500 hover:bg-red-600 text-white"
-    : "bg-yellow-500 hover:bg-yellow-600 text-pm-bg";
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative bg-pm-surface border border-pm-border rounded-xl p-6 w-full max-w-sm shadow-xl">
-        <h3 className="text-base font-semibold text-pm-text mb-2">{modal.title}</h3>
-        <p className="text-sm text-pm-muted mb-6">{modal.message}</p>
-        <div className="flex gap-3 justify-end">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium border border-pm-border rounded-lg text-pm-muted hover:text-pm-text transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={modal.onConfirm}
-            className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${btnClass}`}
-          >
-            {modal.confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function AdminPanel() {
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -76,7 +41,8 @@ export default function AdminPanel() {
   const [copied, setCopied] = useState<number | null>(null);
   const [tab, setTab] = useState<"invites" | "businesses">("businesses");
   const [error, setError] = useState("");
-  const [modal, setModal] = useState<ModalState | null>(null);
+  const [businessErrors, setBusinessErrors] = useState<Record<number, string>>({});
+  const [modal, setModal] = useState<ConfirmModalState | null>(null);
 
   useEffect(() => { loadAll(); }, []);
 
@@ -145,8 +111,10 @@ export default function AdminPanel() {
             ? await adminService.suspendBusiness(b.id)
             : await adminService.activateBusiness(b.id);
           setBusinesses(prev => prev.map(x => x.id === updated.id ? updated : x));
-        } catch {
-          setError(`Error al ${suspending ? 'suspender' : 'activar'} el negocio`);
+          setBusinessErrors(prev => { const n = { ...prev }; delete n[b.id]; return n; });
+        } catch (e: any) {
+          const msg = e?.response?.data?.message || `Error al ${suspending ? 'suspender' : 'activar'} el negocio`;
+          setBusinessErrors(prev => ({ ...prev, [b.id]: msg }));
         }
       },
     });
@@ -164,8 +132,9 @@ export default function AdminPanel() {
           await adminService.deleteBusiness(b.id);
           setBusinesses(prev => prev.filter(x => x.id !== b.id));
           setStats(prev => prev ? { ...prev, businesses: prev.businesses - 1 } : prev);
-        } catch {
-          setError('Error al eliminar el negocio');
+        } catch (e: any) {
+          const msg = e?.response?.data?.message || 'Error al eliminar el negocio';
+          setBusinessErrors(prev => ({ ...prev, [b.id]: msg }));
         }
       },
     });
@@ -212,8 +181,10 @@ export default function AdminPanel() {
         try {
           const updated = await adminService.toggleTeamMode(b.id, enabling);
           setBusinesses(prev => prev.map(x => x.id === updated.id ? updated : x));
-        } catch {
-          setError("Error al cambiar el modo de equipo");
+          setBusinessErrors(prev => { const n = { ...prev }; delete n[b.id]; return n; });
+        } catch (e: any) {
+          const msg = e?.response?.data?.message || `Error al ${enabling ? 'activar' : 'desactivar'} el modo equipo`;
+          setBusinessErrors(prev => ({ ...prev, [b.id]: msg }));
         }
       },
     });
@@ -365,7 +336,13 @@ export default function AdminPanel() {
           ) : (
             <ul className="divide-y divide-pm-border">
               {businesses.map(b => (
-                <li key={b.id} className="px-4 py-4 flex items-center gap-3">
+                <li key={b.id} className="px-4 py-4">
+                  {businessErrors[b.id] && (
+                    <div className="mb-3 px-3 py-2 rounded-lg bg-red-400/10 border border-red-400/20 text-red-400 text-xs">
+                      {businessErrors[b.id]}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <p className="text-sm font-semibold text-pm-text">{b.name}</p>
@@ -405,6 +382,7 @@ export default function AdminPanel() {
                     >
                       Eliminar
                     </button>
+                  </div>
                   </div>
                 </li>
               ))}
