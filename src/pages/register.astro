@@ -12,6 +12,11 @@ import { APP_NAME } from "../config/app";
         <p class="mt-2 text-pm-muted text-sm">Crea tu cuenta y reduce los no-shows de tu negocio</p>
       </div>
 
+      <!-- Registration disabled banner -->
+      <div id="registration-disabled-banner" class="hidden bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 px-4 py-3 rounded-lg text-sm">
+        El registro está deshabilitado en este momento. Contacta al administrador.
+      </div>
+
       <!-- Invalid token banner -->
       <div id="invalid-token-banner" class="hidden bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm">
         Esta invitación es inválida, ya fue utilizada o expiró. Solicita un nuevo link al equipo.
@@ -236,6 +241,23 @@ import { APP_NAME } from "../config/app";
         if (user) { window.location.href = '/provider/dashboard'; return; }
       } catch {}
     }
+
+    // Check if registration is enabled before doing anything else
+    try {
+      const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+      const res = await fetch(`${API_URL}/platform-settings`);
+      if (res.ok) {
+        const settings = await res.json();
+        if (settings.registrationEnabled === false) {
+          document.getElementById('registration-disabled-banner')!.classList.remove('hidden');
+          document.getElementById('step-account')!.classList.add('hidden');
+          return;
+        }
+      }
+    } catch {
+      // If the endpoint fails we fall through and let the normal flow handle it
+    }
+
     const token = new URLSearchParams(window.location.search).get('token');
     if (token) {
       await validateToken(token);
