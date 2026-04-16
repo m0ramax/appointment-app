@@ -1,10 +1,30 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TeamScheduleGrid from "./TeamScheduleGrid";
 import WorkScheduleManager from "./WorkScheduleManager";
+import { authService, apiClient } from "../../lib/api/auth";
 
 export default function SchedulePageWrapper() {
-  const [tab, setTab] = useState<"grid" | "list">("grid");
+  const [tab, setTab] = useState<"grid" | "list">("list");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [teamMode, setTeamMode] = useState(false);
+  const [loadingTeamMode, setLoadingTeamMode] = useState(true);
+
+  useEffect(() => {
+    authService.getProfile().then(user => {
+      if (!user || user.role?.toUpperCase() !== "OWNER" || !user.businessId) {
+        setLoadingTeamMode(false);
+        return;
+      }
+      apiClient.get<{ teamMode?: boolean }>(`/business/${user.businessId}`)
+        .then(r => {
+          const tm = r.data.teamMode === true;
+          setTeamMode(tm);
+          setTab(tm ? "grid" : "list");
+        })
+        .catch(() => {})
+        .finally(() => setLoadingTeamMode(false));
+    }).catch(() => setLoadingTeamMode(false));
+  }, []);
 
   function handleScheduleUpdate() {
     setRefreshKey(k => k + 1);
@@ -14,19 +34,22 @@ export default function SchedulePageWrapper() {
   const tabActive = `${tabBase} border-pm-gold text-pm-gold`;
   const tabInactive = `${tabBase} border-transparent text-pm-muted hover:text-pm-text`;
 
+  if (loadingTeamMode) return null;
+
   return (
     <div>
-      {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b border-pm-border">
-        <button onClick={() => setTab("grid")} className={tab === "grid" ? tabActive : tabInactive}>
-          Vista por bloques
-        </button>
+        {teamMode && (
+          <button onClick={() => setTab("grid")} className={tab === "grid" ? tabActive : tabInactive}>
+            Vista por bloques
+          </button>
+        )}
         <button onClick={() => setTab("list")} className={tab === "list" ? tabActive : tabInactive}>
           Configuración detallada
         </button>
       </div>
 
-      {tab === "grid" ? (
+      {tab === "grid" && teamMode ? (
         <TeamScheduleGrid refreshKey={refreshKey} />
       ) : (
         <WorkScheduleManager onScheduleUpdate={handleScheduleUpdate} />

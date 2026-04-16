@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { workScheduleService, type WorkSchedule, type WorkScheduleCreate, type WorkScheduleUpdate, type TeamMember } from "../../lib/api/work-schedule";
-import { authService } from "../../lib/api/auth";
+import { authService, apiClient } from "../../lib/api/auth";
+import ConfirmModal, { type ConfirmModalState } from "../ui/ConfirmModal";
 
 interface WorkScheduleManagerProps {
   onScheduleUpdate?: () => void;
@@ -16,19 +17,37 @@ const DAYS_OF_WEEK = [
   { id: "SUNDAY",    name: "Domingo" },
 ];
 
+const DAY_OFFSET: Record<string, number> = {
+  MONDAY: 0, TUESDAY: 1, WEDNESDAY: 2, THURSDAY: 3,
+  FRIDAY: 4, SATURDAY: 5, SUNDAY: 6,
+};
+
+function isDayInPastThisWeek(dayId: string): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const jsDay = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(monday.getDate() + (jsDay === 0 ? -6 : 1 - jsDay));
+  const dayDate = new Date(monday);
+  dayDate.setDate(dayDate.getDate() + (DAY_OFFSET[dayId] ?? 0));
+  return dayDate < today;
+}
+
 export default function WorkScheduleManager({ onScheduleUpdate }: WorkScheduleManagerProps) {
   const [schedules, setSchedules] = useState<WorkSchedule[]>([]);
   const [defaultSlotDuration, setDefaultSlotDuration] = useState(30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [editingDay, setEditingDay] = useState<string | null>(null);
+  const [modal, setModal] = useState<ConfirmModalState | null>(null);
   const [isOwner, setIsOwner] = useState(false);
+  const [teamMode, setTeamMode] = useState(false);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [selectedProviderId, setSelectedProviderId] = useState<number | undefined>(undefined);
   const [currentUserId, setCurrentUserId] = useState<number | undefined>(undefined);
 
   useEffect(() => {
-    authService.getProfile().then(user => {
+    authService.getProfile().then(async user => {
       if (!user) { setError("Error al obtener información del usuario"); setLoading(false); return; }
       const role = user.role?.toUpperCase();
       if (role !== "PROVIDER" && role !== "OWNER") {
@@ -39,6 +58,12 @@ export default function WorkScheduleManager({ onScheduleUpdate }: WorkScheduleMa
       setCurrentUserId(user.id);
       if (role === "OWNER") {
         setIsOwner(true);
+        // Fetch teamMode from business
+        if (user.businessId) {
+          apiClient.get<{ teamMode?: boolean }>(`/business/${user.businessId}`)
+            .then(r => setTeamMode(r.data.teamMode === true))
+            .catch(() => {});
+        }
         workScheduleService.getTeam().then(members => {
           setTeam(members);
           setSelectedProviderId(user.id);
@@ -105,15 +130,23 @@ export default function WorkScheduleManager({ onScheduleUpdate }: WorkScheduleMa
     }
   };
 
-  const handleDeleteSchedule = async (scheduleId: number) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar este horario?")) return;
-    try {
-      await workScheduleService.deleteWorkSchedule(scheduleId);
-      await loadScheduleData();
-      onScheduleUpdate?.();
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Error al eliminar horario");
-    }
+  const handleDeleteSchedule = (scheduleId: number) => {
+    setModal({
+      title: "Eliminar horario",
+      message: "¿Estás seguro de que quieres eliminar este horario?",
+      confirmLabel: "Eliminar",
+      variant: "danger",
+      onConfirm: async () => {
+        setModal(null);
+        try {
+          await workScheduleService.deleteWorkSchedule(scheduleId);
+          await loadScheduleData();
+          onScheduleUpdate?.();
+        } catch (err: any) {
+          setError(err.response?.data?.message || "Error al eliminar horario");
+        }
+      },
+    });
   };
 
   const getScheduleForDay = (dayOfWeek: string): WorkSchedule | null =>
@@ -135,6 +168,8 @@ export default function WorkScheduleManager({ onScheduleUpdate }: WorkScheduleMa
   }
 
   return (
+    <>
+    {modal && <ConfirmModal modal={modal} onCancel={() => setModal(null)} />}
     <div className="space-y-5 mt-6">
       <div className="flex justify-between items-center">
         <h3 className="text-base font-semibold text-pm-text">Horarios de Trabajo</h3>
@@ -143,8 +178,8 @@ export default function WorkScheduleManager({ onScheduleUpdate }: WorkScheduleMa
         </button>
       </div>
 
-      {/* Team selector for OWNER */}
-      {isOwner && team.length > 0 && (
+      {/* Team selector for OWNER — only in team mode */}
+      {isOwner && teamMode && team.length > 0 && (
         <div className="bg-pm-surface border border-pm-border rounded-xl p-4">
           <label className="block text-xs font-medium text-pm-muted mb-2">Gestionando horario de</label>
           <div className="flex flex-wrap gap-2">
@@ -221,6 +256,8 @@ export default function WorkScheduleManager({ onScheduleUpdate }: WorkScheduleMa
                           Eliminar
                         </button>
                       </>
+                    ) : isDayInPastThisWeek(day.id) ? (
+                      <span className="text-xs text-pm-dim">Día pasado</span>
                     ) : (
                       <button
                         onClick={() => handleCreateSchedule(day.id)}
@@ -245,6 +282,7 @@ export default function WorkScheduleManager({ onScheduleUpdate }: WorkScheduleMa
         </div>
       </div>
     </div>
+    </>
   );
 }
 

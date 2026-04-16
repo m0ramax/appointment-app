@@ -113,9 +113,10 @@ export default function TeamScheduleGrid({ refreshKey }: TeamScheduleGridProps) 
 
   // ── Week dates ───────────────────────────────────────────────────────────
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  const weekStart = addDays(getMondayOfWeek(today), weekOffset * 7);
+  const weekStart = addDays(getMondayOfWeek(today), Math.max(0, weekOffset) * 7);
   const weekEnd   = addDays(weekStart, 6);
   const colDates  = DAYS.map((_, i) => addDays(weekStart, i));
+  const isPastCol = (col: number) => colDates[col] < today;
 
   // ── Init / reload ────────────────────────────────────────────────────────
   useEffect(() => { load(); }, [refreshKey]);
@@ -259,6 +260,7 @@ export default function TeamScheduleGrid({ refreshKey }: TeamScheduleGridProps) 
 
   // ── Mouse selection handlers ─────────────────────────────────────────────
   function handleCellMouseDown(row: number, col: number, e: React.MouseEvent) {
+    if (isPastCol(col)) return;
     e.preventDefault(); // prevent text selection during drag
     const key = cellKey(DAYS[col].id, HOURS[row]);
     const mode: "add" | "remove" = committed.has(key) ? "remove" : "add";
@@ -273,6 +275,7 @@ export default function TeamScheduleGrid({ refreshKey }: TeamScheduleGridProps) 
   }
 
   function handleCellMouseEnter(row: number, col: number) {
+    if (isPastCol(col)) return;
     if (!isDraggingRef.current || !dragAnchorRef.current) return;
     const anchor = dragAnchorRef.current;
     // Ignore re-entry into the anchor cell itself (no movement = still a click)
@@ -347,7 +350,11 @@ export default function TeamScheduleGrid({ refreshKey }: TeamScheduleGridProps) 
     date.getDate()     === today.getDate();
 
   // ── Cell visual class ─────────────────────────────────────────────────────
-  function cellClass(dayId: string, hour: string, hasSlots: boolean): string {
+  function cellClass(dayId: string, hour: string, hasSlots: boolean, col: number): string {
+    if (isPastCol(col)) {
+      return "w-full h-7 rounded border border-pm-border/10 bg-pm-bg/30 flex items-center justify-center gap-0.5 px-1 select-none cursor-not-allowed opacity-40 ";
+    }
+
     const key        = cellKey(dayId, hour);
     const isSelected = effectiveSelection.has(key);
     const isPreview  = dragPreview.has(key);
@@ -390,8 +397,9 @@ export default function TeamScheduleGrid({ refreshKey }: TeamScheduleGridProps) 
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setWeekOffset(w => w - 1)}
-            className="w-7 h-7 flex items-center justify-center rounded-lg border border-pm-border text-pm-muted hover:border-pm-gold hover:text-pm-text transition-colors"
+            onClick={() => setWeekOffset(w => Math.max(0, w - 1))}
+            disabled={weekOffset === 0}
+            className="w-7 h-7 flex items-center justify-center rounded-lg border border-pm-border text-pm-muted hover:border-pm-gold hover:text-pm-text transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-pm-border disabled:hover:text-pm-muted"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
@@ -459,7 +467,7 @@ export default function TeamScheduleGrid({ refreshKey }: TeamScheduleGridProps) 
                         <div
                           onMouseDown={e => handleCellMouseDown(row, col, e)}
                           onMouseEnter={() => handleCellMouseEnter(row, col)}
-                          className={cellClass(day.id, hour, slots.length > 0)}
+                          className={cellClass(day.id, hour, slots.length > 0, col)}
                           title={slots.length > 0
                             ? slots.map(s => getMemberName(s.memberId)).join(", ")
                             : "Sin asignar"

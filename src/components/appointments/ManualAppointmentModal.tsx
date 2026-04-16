@@ -26,6 +26,7 @@ function todayLocalISO() {
 
 export default function ManualAppointmentModal({ businessId, onClose, onCreated }: Props) {
   const [team, setTeam] = useState<TeamMember[]>([]);
+  const [teamMode, setTeamMode] = useState(false);
   const [services, setServices] = useState<Service[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -41,7 +42,19 @@ export default function ManualAppointmentModal({ businessId, onClose, onCreated 
   });
 
   useEffect(() => {
-    workScheduleService.getTeam().then(setTeam).catch(() => {});
+    Promise.all([
+      workScheduleService.getTeam(),
+      apiClient.get<{ teamMode?: boolean }>(`/business/${businessId}`),
+    ]).then(([members, bizRes]) => {
+      const tm = bizRes.data.teamMode === true;
+      setTeamMode(tm);
+      setTeam(members);
+      // In solo mode, auto-assign to the owner
+      if (!tm) {
+        const owner = members.find(m => m.role?.toUpperCase() === "OWNER");
+        if (owner) setForm(f => ({ ...f, providerId: String(owner.id) }));
+      }
+    }).catch(() => {});
     apiClient.get<Service[]>(`/services/business/${businessId}`)
       .then(r => setServices(r.data))
       .catch(() => {});
@@ -110,24 +123,26 @@ export default function ManualAppointmentModal({ businessId, onClose, onCreated 
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Provider */}
-          <div>
-            <label className={labelClass}>Proveedor</label>
-            <select
-              value={form.providerId}
-              onChange={e => setForm(f => ({ ...f, providerId: e.target.value }))}
-              required
-              className={inputClass}
-            >
-              <option value="">Seleccionar proveedor</option>
-              {team.map(m => (
-                <option key={m.id} value={String(m.id)} className="bg-pm-elevated">
-                  {m.email.split("@")[0].charAt(0).toUpperCase() + m.email.split("@")[0].slice(1)}
-                  {m.role === "OWNER" ? " (Admin)" : " (Proveedor)"}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Provider — only show in team mode */}
+          {teamMode && (
+            <div>
+              <label className={labelClass}>Proveedor</label>
+              <select
+                value={form.providerId}
+                onChange={e => setForm(f => ({ ...f, providerId: e.target.value }))}
+                required
+                className={inputClass}
+              >
+                <option value="">Seleccionar proveedor</option>
+                {team.map(m => (
+                  <option key={m.id} value={String(m.id)} className="bg-pm-elevated">
+                    {m.email.split("@")[0].charAt(0).toUpperCase() + m.email.split("@")[0].slice(1)}
+                    {m.role === "OWNER" ? " (Admin)" : " (Proveedor)"}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Client email */}
           <div>

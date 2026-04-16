@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { authService } from "../../lib/api/auth";
+import { authService, apiClient } from "../../lib/api/auth";
 import { appointmentService, type AppointmentWithParties } from "../../lib/api/appointments";
 import { workScheduleService, type TeamMember, type WorkSchedule } from "../../lib/api/work-schedule";
 import { PROVIDER_COLORS } from "../../lib/providerColors";
@@ -604,6 +604,7 @@ export default function DayScheduleGrid() {
   const [role, setRole]     = useState("");
   const [userId, setUserId] = useState<number | null>(null);
   const [team, setTeam]     = useState<TeamMember[]>([]);
+  const [teamMode, setTeamMode] = useState(false);
   const [schedules, setSchedules] = useState<Record<number, WorkSchedule[]>>({});
   const [appointments, setAppointments] = useState<AppointmentWithParties[]>([]);
   const [allAppointments, setAllAppointments] = useState<AppointmentWithParties[]>([]);
@@ -637,7 +638,19 @@ export default function DayScheduleGrid() {
       setUserId(user.id);
 
       if (r === "OWNER") {
-        const members = await workScheduleService.getTeam();
+        // Check teamMode before loading team
+        let isTeamMode = false;
+        if (user.businessId) {
+          try {
+            const bizRes = await apiClient.get<{ teamMode?: boolean }>(`/business/${user.businessId}`);
+            isTeamMode = bizRes.data.teamMode === true;
+          } catch {}
+        }
+        setTeamMode(isTeamMode);
+
+        const allMembers = await workScheduleService.getTeam();
+        // In solo mode, only show the owner
+        const members = isTeamMode ? allMembers : allMembers.filter(m => m.id === user.id);
         setTeam(members);
         const entries = await Promise.all(members.map(async m => {
           const s = await workScheduleService.getMyWorkSchedules(m.id !== user.id ? m.id : undefined);

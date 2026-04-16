@@ -96,7 +96,7 @@ export const adminService = {
   },
 
   async toggleTeamMode(id: number, teamMode: boolean): Promise<Business> {
-    const r = await apiClient.patch<Business>(`/admin/business/${id}/team-mode`, { teamMode });
+    const r = await apiClient.patch<Business>(`/admin/businesses/${id}/team-mode`, { teamMode });
     return r.data;
   },
 };
