@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { adminService, type InviteToken, type Business, type AdminStats } from "../../lib/api/admin";
+import { adminService, platformSettingsService, type InviteToken, type Business, type AdminStats, type PlatformSettings } from "../../lib/api/admin";
 
 const BASE_URL = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -13,6 +13,18 @@ function SuspendedBadge() {
   return (
     <span className="px-2 py-0.5 text-xs rounded-full bg-red-400/10 text-red-400 border border-red-400/20">
       Suspendido
+    </span>
+  );
+}
+
+function TeamModeBadge({ teamMode }: { teamMode: boolean }) {
+  return teamMode ? (
+    <span className="px-2 py-0.5 text-xs rounded-full bg-violet-400/10 text-violet-400 border border-violet-400/20">
+      Equipo
+    </span>
+  ) : (
+    <span className="px-2 py-0.5 text-xs rounded-full bg-pm-elevated text-pm-dim border border-pm-border">
+      Solo
     </span>
   );
 }
@@ -58,6 +70,7 @@ export default function AdminPanel() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [invites, setInvites] = useState<InviteToken[]>([]);
   const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [platformSettings, setPlatformSettings] = useState<PlatformSettings | null>(null);
   const [note, setNote] = useState("");
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState<number | null>(null);
@@ -69,14 +82,16 @@ export default function AdminPanel() {
 
   async function loadAll() {
     try {
-      const [s, i, b] = await Promise.all([
+      const [s, i, b, ps] = await Promise.all([
         adminService.getStats(),
         adminService.getInvites(),
         adminService.getAdminBusinesses(),
+        platformSettingsService.get(),
       ]);
       setStats(s);
       setInvites(i);
       setBusinesses(b);
+      setPlatformSettings(ps);
     } catch {
       setError("Error al cargar datos. Verifica que tienes permisos de Super Admin.");
     }
@@ -156,6 +171,54 @@ export default function AdminPanel() {
     });
   }
 
+  function handleToggleRegistration() {
+    if (!platformSettings) return;
+    const disabling = platformSettings.registrationEnabled;
+    if (disabling) {
+      setModal({
+        title: "Deshabilitar el registro",
+        message: "¿Deshabilitar el registro? Los nuevos negocios no podrán registrarse.",
+        confirmLabel: "Deshabilitar",
+        variant: "warning",
+        onConfirm: async () => {
+          setModal(null);
+          try {
+            const updated = await platformSettingsService.update({ registrationEnabled: false });
+            setPlatformSettings(updated);
+          } catch {
+            setError("Error al actualizar la configuración de registro");
+          }
+        },
+      });
+    } else {
+      // Enabling is non-destructive — no confirmation needed
+      platformSettingsService.update({ registrationEnabled: true })
+        .then(updated => setPlatformSettings(updated))
+        .catch(() => setError("Error al actualizar la configuración de registro"));
+    }
+  }
+
+  function handleToggleTeamMode(b: Business) {
+    const enabling = !b.teamMode;
+    setModal({
+      title: enabling ? `Activar modo equipo en "${b.name}"` : `Desactivar modo equipo en "${b.name}"`,
+      message: enabling
+        ? "El negocio podrá gestionar múltiples proveedores y asignarles citas."
+        : "El negocio volverá al modo individual. Los proveedores adicionales no serán visibles.",
+      confirmLabel: enabling ? "Activar equipo" : "Cambiar a solo",
+      variant: "warning",
+      onConfirm: async () => {
+        setModal(null);
+        try {
+          const updated = await adminService.toggleTeamMode(b.id, enabling);
+          setBusinesses(prev => prev.map(x => x.id === updated.id ? updated : x));
+        } catch {
+          setError("Error al cambiar el modo de equipo");
+        }
+      },
+    });
+  }
+
   function copyLink(invite: InviteToken) {
     const url = `${BASE_URL}/register?token=${invite.token}`;
     navigator.clipboard.writeText(url);
@@ -190,6 +253,35 @@ export default function AdminPanel() {
               <p className={`text-3xl font-bold mt-1 ${s.color}`}>{s.value}</p>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Platform settings */}
+      {platformSettings !== null && (
+        <div className="bg-pm-surface border border-pm-border rounded-xl p-4">
+          <p className="text-xs font-semibold text-pm-dim uppercase tracking-wider mb-3">Configuracion de plataforma</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-pm-text">Registro de nuevos negocios</p>
+              <p className="text-xs text-pm-muted mt-0.5">
+                {platformSettings.registrationEnabled ? "Habilitado" : "Deshabilitado"}
+              </p>
+            </div>
+            <button
+              onClick={handleToggleRegistration}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                platformSettings.registrationEnabled ? "bg-green-500" : "bg-pm-border"
+              }`}
+              role="switch"
+              aria-checked={platformSettings.registrationEnabled}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                  platformSettings.registrationEnabled ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
         </div>
       )}
 
@@ -278,6 +370,7 @@ export default function AdminPanel() {
                     <div className="flex items-center gap-2 mb-1">
                       <p className="text-sm font-semibold text-pm-text">{b.name}</p>
                       {b.suspended && <SuspendedBadge />}
+                      <TeamModeBadge teamMode={b.teamMode} />
                     </div>
                     <p className="text-xs text-pm-dim">{b.whatsappNumber}</p>
                     <p className="text-xs text-pm-dim mt-0.5">
@@ -286,6 +379,16 @@ export default function AdminPanel() {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-xs text-pm-dim mr-1">ID #{b.id}</span>
+                    <button
+                      onClick={() => handleToggleTeamMode(b)}
+                      className={`px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors ${
+                        b.teamMode
+                          ? 'border-pm-border text-pm-muted hover:border-pm-gold hover:text-pm-text'
+                          : 'border-violet-400/30 text-violet-400 hover:bg-violet-400/10'
+                      }`}
+                    >
+                      {b.teamMode ? 'Solo' : 'Activar equipo'}
+                    </button>
                     <button
                       onClick={() => handleToggleSuspend(b)}
                       className={`px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors ${

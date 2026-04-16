@@ -237,7 +237,7 @@ import ManualAppointmentTrigger from "../../../components/appointments/ManualApp
 
 <script>
     import { appointmentService } from "../../../lib/api/appointments.ts";
-    import { authService } from "../../../lib/api/auth.ts";
+    import { authService, apiClient } from "../../../lib/api/auth.ts";
 
     declare global {
         interface Window {
@@ -290,12 +290,25 @@ import ManualAppointmentTrigger from "../../../components/appointments/ManualApp
                     : `${capitalizedName}`;
 
             if (isOwner) {
-                document.getElementById("btn-team")?.classList.remove("hidden");
+                // Only show team management buttons when teamMode is enabled on the business
+                let teamMode = true; // default to visible while loading
+                try {
+                    const bizRes = await apiClient.get<{ teamMode?: boolean }[]>("/business");
+                    if (bizRes.data && bizRes.data.length > 0) {
+                        teamMode = bizRes.data[0].teamMode !== false;
+                    }
+                } catch {
+                    // If the request fails, default to showing team buttons
+                }
+
+                if (teamMode) {
+                    document.getElementById("btn-team")?.classList.remove("hidden");
+                    document
+                        .getElementById("quick-team")
+                        ?.classList.remove("hidden");
+                }
                 document
                     .getElementById("btn-schedule")
-                    ?.classList.remove("hidden");
-                document
-                    .getElementById("quick-team")
                     ?.classList.remove("hidden");
                 document
                     .getElementById("quick-schedule")
