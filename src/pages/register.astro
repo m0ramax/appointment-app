@@ -242,23 +242,23 @@ import { APP_NAME } from "../config/app";
       } catch {}
     }
 
-    // Check if registration is enabled before doing anything else
-    try {
-      const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
-      const res = await fetch(`${API_URL}/platform-settings`);
-      if (res.ok) {
-        const settings = await res.json();
-        if (settings.registrationEnabled === false) {
-          document.getElementById('registration-disabled-banner')!.classList.remove('hidden');
-          document.getElementById('step-account')!.classList.add('hidden');
-          return;
-        }
-      }
-    } catch {
-      // If the endpoint fails we fall through and let the normal flow handle it
-    }
-
     const token = new URLSearchParams(window.location.search).get('token');
+
+    // Only check registrationEnabled when there's no invite token
+    if (!token) {
+      try {
+        const API_URL = import.meta.env.PUBLIC_API_URL || 'http://localhost:3000';
+        const res = await fetch(`${API_URL}/platform-settings`);
+        if (res.ok) {
+          const settings = await res.json();
+          if (settings.registrationEnabled === false) {
+            document.getElementById('registration-disabled-banner')!.classList.remove('hidden');
+            document.getElementById('step-account')!.classList.add('hidden');
+            return;
+          }
+        }
+      } catch {}
+    }
     if (token) {
       await validateToken(token);
     } else {
