@@ -354,28 +354,40 @@ export default function AdminPanel() {
                       {b._count.users} usuarios · {b._count.services} servicios · {b._count.appointments} citas
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-xs text-pm-dim mr-1">ID #{b.id}</span>
-                    <button
-                      onClick={() => handleToggleTeamMode(b)}
-                      className={`px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors ${
-                        b.teamMode
-                          ? 'border-pm-border text-pm-muted hover:border-pm-gold hover:text-pm-text'
-                          : 'border-violet-400/30 text-violet-400 hover:bg-violet-400/10'
-                      }`}
-                    >
-                      {b.teamMode ? 'Solo' : 'Activar equipo'}
-                    </button>
-                    <button
-                      onClick={() => handleToggleSuspend(b)}
-                      className={`px-3 py-1.5 text-xs font-medium border rounded-lg transition-colors ${
-                        b.suspended
-                          ? 'border-green-400/30 text-green-400 hover:bg-green-400/10'
-                          : 'border-yellow-400/30 text-yellow-400 hover:bg-yellow-400/10'
-                      }`}
-                    >
-                      {b.suspended ? 'Activar' : 'Suspender'}
-                    </button>
+                  <div className="flex items-center gap-4 flex-shrink-0">
+                    <span className="text-xs text-pm-dim">ID #{b.id}</span>
+                    {/* Team mode toggle */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-pm-dim">Equipo</span>
+                      <button
+                        onClick={() => handleToggleTeamMode(b)}
+                        role="switch"
+                        aria-checked={b.teamMode}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                          b.teamMode ? 'bg-violet-500' : 'bg-pm-border'
+                        }`}
+                      >
+                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                          b.teamMode ? 'translate-x-[18px]' : 'translate-x-[3px]'
+                        }`} />
+                      </button>
+                    </div>
+                    {/* Suspend toggle */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-pm-dim">Activo</span>
+                      <button
+                        onClick={() => handleToggleSuspend(b)}
+                        role="switch"
+                        aria-checked={!b.suspended}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                          !b.suspended ? 'bg-green-500' : 'bg-pm-border'
+                        }`}
+                      >
+                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                          !b.suspended ? 'translate-x-[18px]' : 'translate-x-[3px]'
+                        }`} />
+                      </button>
+                    </div>
                     <button
                       onClick={() => handleDeleteBusiness(b)}
                       className="px-3 py-1.5 text-xs font-medium border border-red-400/30 rounded-lg text-red-400 hover:bg-red-400/10 transition-colors"
