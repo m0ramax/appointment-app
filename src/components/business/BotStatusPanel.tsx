@@ -131,18 +131,6 @@ export default function BotStatusPanel() {
             Configuracion del agendamiento automatico por WhatsApp
           </p>
         </div>
-        <span
-          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
-            status.configured
-              ? "bg-green-400/10 text-green-400 border border-green-400/20"
-              : "bg-pm-elevated text-pm-dim border border-pm-border"
-          }`}
-        >
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${status.configured ? "bg-green-400" : "bg-pm-dim"}`}
-          />
-          {status.configured ? "Número registrado" : "Sin configurar"}
-        </span>
       </div>
 
       <div className="space-y-6">
