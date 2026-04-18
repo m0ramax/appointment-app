@@ -349,9 +349,12 @@ export default function AdminPanel() {
                       {b.suspended && <SuspendedBadge />}
                       <TeamModeBadge teamMode={b.teamMode} />
                     </div>
+                    {b.users[0] && (
+                      <p className="text-xs text-pm-muted">{b.users[0].email}</p>
+                    )}
                     <p className="text-xs text-pm-dim">{b.whatsappNumber}</p>
                     <p className="text-xs text-pm-dim mt-0.5">
-                      {b._count.users} usuarios · {b._count.services} servicios · {b._count.appointments} citas
+                      {b._count.users} usuarios · {b._count.services} servicios · activo desde {b.createdAt ? new Date(b.createdAt).toLocaleDateString("es", { day: "numeric", month: "short", year: "numeric" }) : "—"}
                     </p>
                   </div>
                   <div className="flex items-center gap-4 flex-shrink-0">
