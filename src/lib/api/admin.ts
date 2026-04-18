@@ -29,6 +29,8 @@ export interface Business {
   allowProviderSelection: boolean;
   suspended: boolean;
   teamMode: boolean;
+  createdAt: string;
+  users: { email: string }[];
   _count: {
     users: number;
     services: number;
